@@ -1,0 +1,8 @@
+export(dta_from_meta)
+export(fit_bivariate_dta)
+export(fit_bivariate_meta)
+export(fit_forest_summary)
+export(plot_sensspec_forest)
+export(plot_sensspec_forest_meta)
+export(plot_sroc)
+export(posttest_probability)
