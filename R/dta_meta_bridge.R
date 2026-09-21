@@ -175,15 +175,17 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
   invisible(output_file)
 }
 
-#' Fit the standard Reitsma bivariate model and generate HSROC plot data.
+#' Fit a Reitsma bivariate model and generate SROC plot data.
 #'
-#' The SROC uses the Rutter-Gatsonis parameterisation implemented by mada,
-#' rather than a conditional-mean ("naive") curve.
-fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), n_grid = 1000) {
+#' By default, the SROC uses mada's conditional-mean ("naive") curve for
+#' compatibility with the requested Stata workflow. Set sroc_type to
+#' "ruttergatsonis" for that alternative parameterisation.
+fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("naive", "ruttergatsonis"), n_grid = 1000) {
   .assert_dta_data(data, study_col)
   if (nrow(data) < 3) stop("At least three studies are required for the bivariate model.", call. = FALSE)
   correction_control <- match.arg(correction_control)
   method <- match.arg(method)
+  sroc_type <- match.arg(sroc_type)
   if (!is.numeric(correction) || length(correction) != 1 || correction < 0) stop("correction must be a single non-negative number.", call. = FALSE)
   if (n_grid < 100) stop("n_grid must be at least 100.", call. = FALSE)
   standardized <- data.frame(study = as.character(data[[study_col]]), TP = data$TP, FP = data$FP, FN = data$FN, TN = data$TN)
@@ -201,11 +203,11 @@ fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, corre
   full_fpr_grid <- seq(.001, .999, length.out = n_grid)
   observed_fpr <- standardized$FP / (standardized$FP + standardized$TN)
   display_fpr_grid <- seq(max(.001, min(observed_fpr)), min(.999, max(observed_fpr)), length.out = n_grid)
-  standard_sroc <- mada::sroc(fit, fpr = display_fpr_grid, type = "ruttergatsonis")
-  auc_result <- mada::AUC(fit, fpr = full_fpr_grid, sroc.type = "ruttergatsonis")
+  standard_sroc <- mada::sroc(fit, fpr = display_fpr_grid, type = sroc_type)
+  auc_result <- mada::AUC(fit, fpr = full_fpr_grid, sroc.type = sroc_type)
   list(
     model = fit,
-    model_type = "mada::reitsma Rutter-Gatsonis HSROC",
+    model_type = paste("mada::reitsma", sroc_type, "SROC"),
     metrics = list(
       sensitivity = sensitivity,
       specificity = specificity,
