@@ -13,6 +13,7 @@ if (requireNamespace("meta", quietly = TRUE)) {
   testthat::expect_identical(reconstructed[, c("TP", "FP", "FN", "TN")], toy_dta[, c("TP", "FP", "FN", "TN")])
   forest_summary <- fit_forest_summary(toy_dta)
   testthat::expect_true(is.finite(forest_summary$heterogeneity$sensitivity$i2))
+  testthat::expect_true(is.finite(forest_summary$heterogeneity$sensitivity$q))
 }
 testthat::expect_error(plot_sensspec_forest(toy_dta, column_widths = c(study = 1)), "column_widths")
 })

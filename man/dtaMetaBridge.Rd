@@ -43,7 +43,7 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   \item{summary_override}{Optional summary sensitivity and specificity values
   used for the forest-plot diamonds.}
   \item{heterogeneity}{Optional list with sensitivity and specificity elements,
-  each containing \code{i2}, \code{tau2}, and \code{p}.}
+  each containing \code{i2}, \code{tau2}, \code{q}, and \code{p}.}
   \item{sens_axis,spec_axis}{Axis tick locations for the two forest plots.}
   \item{column_widths}{Positive named relative widths for the study, count,
   text, and forest-plot columns.}
