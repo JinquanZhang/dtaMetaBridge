@@ -83,6 +83,24 @@ posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
 </tr>
 </table>
 
+### 异质性与列宽调整
+
+使用 `plot_sensspec_forest_meta()` 时，图底部会自动显示灵敏度和特异度各自的
+`I2`、`tau2` 与 Cochran Q 检验 p 值。`column_widths` 是一个命名数值向量；数值是
+各列的相对宽度，可按版面需要调整。下例加宽研究名称和两张森林图区：
+
+```r
+plot_sensspec_forest_meta(
+  meta_sens, meta_spec,
+  output_file = "forest-wide.png",
+  column_widths = c(
+    study = 3.2, tp = 0.45, fp = 0.45, fn = 0.45, tn = 0.45,
+    sens_text = 1.5, spec_text = 1.5,
+    sens_plot = 1.2, spec_plot = 1.2
+  )
+)
+```
+
 ### 结果如何解释
 
 - 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。

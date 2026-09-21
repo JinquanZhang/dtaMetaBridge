@@ -55,7 +55,12 @@ fit_forest_summary <- function(data, study_col = "study") {
   sens <- fit_prop(data$TP, data$TP + data$FN)
   spec <- fit_prop(data$TN, data$TN + data$FP)
   unpack <- function(x) c(est = meta::backtransf(x$TE.random, sm = x$sm), lwr = meta::backtransf(x$lower.random, sm = x$sm), upr = meta::backtransf(x$upper.random, sm = x$sm))
-  list(sensitivity = unpack(sens), specificity = unpack(spec), models = list(sensitivity = sens, specificity = spec))
+  heterogeneity <- function(x) {
+    p <- x$pval.Q
+    if (length(p) > 1 && "LRT" %in% names(p)) p <- p[["LRT"]] else p <- p[1]
+    list(i2 = x$I2, tau2 = x$tau2, p = p)
+  }
+  list(sensitivity = unpack(sens), specificity = unpack(spec), models = list(sensitivity = sens, specificity = spec), heterogeneity = list(sensitivity = heterogeneity(sens), specificity = heterogeneity(spec)))
 }
 
 .assert_metaprop <- function(object, label) {
@@ -104,6 +109,12 @@ dta_from_meta <- function(sensitivity_meta, specificity_meta) {
   list(sens = sens[1], sens_lwr = sens[2], sens_upr = sens[3], spec = spec[1], spec_lwr = spec[2], spec_upr = spec[3])
 }
 
+.meta_heterogeneity <- function(object) {
+  p <- object$pval.Q
+  if (length(p) > 1 && "LRT" %in% names(p)) p <- p[["LRT"]] else p <- p[1]
+  list(i2 = object$I2, tau2 = object$tau2, p = p)
+}
+
 #' Draw a two-panel forest plot directly from meta::metaprop objects.
 #'
 #' By default, the diamond is the exact random-effects summary stored in the
@@ -111,7 +122,8 @@ dta_from_meta <- function(sensitivity_meta, specificity_meta) {
 plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta, ..., use_meta_summary = TRUE) {
   data <- dta_from_meta(sensitivity_meta, specificity_meta)
   summary_override <- if (use_meta_summary) .meta_summary_override(sensitivity_meta, specificity_meta) else NULL
-  plot_sensspec_forest(data, summary_override = summary_override, ...)
+  heterogeneity <- list(sensitivity = .meta_heterogeneity(sensitivity_meta), specificity = .meta_heterogeneity(specificity_meta))
+  plot_sensspec_forest(data, summary_override = summary_override, heterogeneity = heterogeneity, ...)
 }
 
 .draw_forest_panel <- function(values, lower, upper, y, summary, summary_lower, summary_upper, summary_y, region, xlim) {
@@ -133,12 +145,16 @@ plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta, ..., u
 #' @param summary_override Named list containing sens/sens_lwr/sens_upr and/or
 #'   spec/spec_lwr/spec_upr, usually from fit_forest_summary().
 #' @return Invisibly, the supplied output filename (or NULL when drawn to the active device).
-plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", summary_override = NULL, sens_axis = seq(0, 1, .2), spec_axis = seq(0, 1, .2), width = 10, height = NULL, res = 300) {
+plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", summary_override = NULL, heterogeneity = NULL, sens_axis = seq(0, 1, .2), spec_axis = seq(0, 1, .2), column_widths = c(study = 2.8, tp = .5, fp = .5, fn = .5, tn = .5, sens_text = 1.6, spec_text = 1.6, sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300) {
   forest <- .forest_data(data, study_col, summary_override = summary_override)
   studies <- forest$studies
   summary <- forest$summary
   n <- nrow(studies)
-  if (is.null(height)) height <- max(4, 1.2 + .38 * (n + 3))
+  required_columns <- c("study", "tp", "fp", "fn", "tn", "sens_text", "spec_text", "sens_plot", "spec_plot")
+  if (!is.numeric(column_widths) || !identical(names(column_widths), required_columns) || any(!is.finite(column_widths) | column_widths <= 0)) {
+    stop("column_widths must be a positive named vector with study, tp, fp, fn, tn, sens_text, spec_text, sens_plot and spec_plot.", call. = FALSE)
+  }
+  if (is.null(height)) height <- max(4, 1.5 + .38 * (n + 3))
   if (!is.null(output_file)) {
     extension <- tolower(tools::file_ext(output_file))
     if (extension == "png") grDevices::png(output_file, width = width, height = height, units = "in", res = res)
@@ -146,28 +162,44 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
     else stop("output_file must end in .png, .tif, or .tiff.", call. = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
   }
-  y <- seq(.79, .79 - .055 * (n - 1), length.out = n)
+  row_gap <- min(.055, .52 / max(1, n - 1))
+  y <- seq(.79, .79 - row_gap * (n - 1), length.out = n)
   summary_y <- min(y) - .09
+  heterogeneity_y <- summary_y - .075
   text <- function(x, y, label, ...) grid::grid.text(label, x = grid::unit(x, "npc"), y = grid::unit(y, "npc"), ...)
   ci_label <- function(est, lwr, upr) sprintf("%.2f [%.2f; %.2f]", est, lwr, upr)
+  format_heterogeneity <- function(x, label) {
+    if (is.null(x)) return(NULL)
+    p <- x$p
+    p_label <- if (!is.finite(p)) "NA" else if (p < .001) "<0.001" else sprintf("%.3f", p)
+    sprintf("%s heterogeneity: I2 = %.1f%%; tau2 = %.3f; Q p = %s", label, 100 * x$i2, x$tau2, p_label)
+  }
+  left <- .015
+  widths <- .97 * column_widths / sum(column_widths)
+  starts <- left + c(0, cumsum(widths)[-length(widths)])
+  ends <- starts + widths
+  centers <- (starts + ends) / 2
+  names(starts) <- names(ends) <- names(centers) <- names(column_widths)
   grid::grid.newpage()
   headers <- c("Study", "TP", "FP", "FN", "TN", "Sensitivity", "Specificity", "Sensitivity", "Specificity")
-  xpos <- c(.02, .31, .36, .41, .46, .54, .66, .78, .92)
-  for (i in seq_along(headers)) text(xpos[i], .91, headers[i], gp = grid::gpar(fontface = "bold", cex = .8), just = if (i == 1) "left" else "centre")
+  header_x <- c(starts[["study"]], centers[c("tp", "fp", "fn", "tn", "sens_text", "spec_text", "sens_plot", "spec_plot")])
+  for (i in seq_along(headers)) text(header_x[i], .91, headers[i], gp = grid::gpar(fontface = "bold", cex = .8), just = if (i == 1) "left" else "centre")
   grid::grid.segments(x0 = grid::unit(.015, "npc"), x1 = grid::unit(.985, "npc"), y0 = grid::unit(.875, "npc"), y1 = grid::unit(.875, "npc"))
   for (i in seq_len(n)) {
     row <- studies[i, ]
-    text(.02, y[i], row$study, just = "left", gp = grid::gpar(cex = .72))
-    for (j in seq_along(c("TP", "FP", "FN", "TN"))) text(xpos[j + 1], y[i], row[[c("TP", "FP", "FN", "TN")[j]]], gp = grid::gpar(cex = .72))
-    text(.54, y[i], ci_label(row$sens, row$sens_lwr, row$sens_upr), gp = grid::gpar(cex = .68))
-    text(.66, y[i], ci_label(row$spec, row$spec_lwr, row$spec_upr), gp = grid::gpar(cex = .68))
+    text(starts[["study"]], y[i], row$study, just = "left", gp = grid::gpar(cex = .72))
+    for (j in seq_along(c("TP", "FP", "FN", "TN"))) text(centers[[tolower(c("TP", "FP", "FN", "TN")[j])]], y[i], row[[c("TP", "FP", "FN", "TN")[j]]], gp = grid::gpar(cex = .72))
+    text(centers[["sens_text"]], y[i], ci_label(row$sens, row$sens_lwr, row$sens_upr), gp = grid::gpar(cex = .68))
+    text(centers[["spec_text"]], y[i], ci_label(row$spec, row$spec_lwr, row$spec_upr), gp = grid::gpar(cex = .68))
   }
-  text(.02, summary_y, summary$study, just = "left", gp = grid::gpar(fontface = "bold", cex = .75))
-  text(.54, summary_y, ci_label(summary$sens, summary$sens_lwr, summary$sens_upr), gp = grid::gpar(fontface = "bold", cex = .7))
-  text(.66, summary_y, ci_label(summary$spec, summary$spec_lwr, summary$spec_upr), gp = grid::gpar(fontface = "bold", cex = .7))
-  .draw_forest_panel(studies$sens, studies$sens_lwr, studies$sens_upr, y, summary$sens, summary$sens_lwr, summary$sens_upr, summary_y, c(.72, .84), range(sens_axis))
-  .draw_forest_panel(studies$spec, studies$spec_lwr, studies$spec_upr, y, summary$spec, summary$spec_lwr, summary$spec_upr, summary_y, c(.86, .98), range(spec_axis))
-  for (axis in list(list(ticks = sens_axis, region = c(.72, .84)), list(ticks = spec_axis, region = c(.86, .98)))) {
+  text(starts[["study"]], summary_y, summary$study, just = "left", gp = grid::gpar(fontface = "bold", cex = .75))
+  text(centers[["sens_text"]], summary_y, ci_label(summary$sens, summary$sens_lwr, summary$sens_upr), gp = grid::gpar(fontface = "bold", cex = .7))
+  text(centers[["spec_text"]], summary_y, ci_label(summary$spec, summary$spec_lwr, summary$spec_upr), gp = grid::gpar(fontface = "bold", cex = .7))
+  .draw_forest_panel(studies$sens, studies$sens_lwr, studies$sens_upr, y, summary$sens, summary$sens_lwr, summary$sens_upr, summary_y, c(starts[["sens_plot"]], ends[["sens_plot"]]), range(sens_axis))
+  .draw_forest_panel(studies$spec, studies$spec_lwr, studies$spec_upr, y, summary$spec, summary$spec_lwr, summary$spec_upr, summary_y, c(starts[["spec_plot"]], ends[["spec_plot"]]), range(spec_axis))
+  heterogeneity_label <- paste(c(format_heterogeneity(heterogeneity$sensitivity, "Sensitivity"), format_heterogeneity(heterogeneity$specificity, "Specificity")), collapse = "     ")
+  if (!is.null(heterogeneity) && nzchar(heterogeneity_label)) text(starts[["study"]], heterogeneity_y, heterogeneity_label, just = "left", gp = grid::gpar(cex = .62, col = "grey25"))
+  for (axis in list(list(ticks = sens_axis, region = c(starts[["sens_plot"]], ends[["sens_plot"]])), list(ticks = spec_axis, region = c(starts[["spec_plot"]], ends[["spec_plot"]])))) {
     x <- axis$region[1] + (axis$ticks - min(axis$ticks)) / diff(range(axis$ticks)) * diff(axis$region)
     grid::grid.segments(x0 = grid::unit(axis$region[1], "npc"), x1 = grid::unit(axis$region[2], "npc"), y0 = grid::unit(summary_y - .05, "npc"), y1 = grid::unit(summary_y - .05, "npc"))
     for (i in seq_along(x)) text(x[i], summary_y - .08, formatC(axis$ticks[i], format = "f", digits = 2), gp = grid::gpar(cex = .62))

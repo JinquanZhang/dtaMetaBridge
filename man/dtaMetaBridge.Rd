@@ -17,7 +17,11 @@ model, draw an SROC curve, and calculate post-test probabilities.
 \usage{
 dta_from_meta(sensitivity_meta, specificity_meta)
 fit_forest_summary(data, study_col = "study")
-plot_sensspec_forest(data, output_file = NULL, study_col = "study", ...)
+plot_sensspec_forest(data, output_file = NULL, study_col = "study",
+  summary_override = NULL, heterogeneity = NULL, sens_axis = seq(0, 1, 0.2),
+  spec_axis = seq(0, 1, 0.2), column_widths = c(study = 2.8, tp = 0.5,
+  fp = 0.5, fn = 0.5, tn = 0.5, sens_text = 1.6, spec_text = 1.6,
+  sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300)
 plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...)
 fit_bivariate_dta(data, study_col = "study", correction = 0.5,
   correction_control = "single", method = "reml", sroc_type = "naive", n_grid = 1000)
@@ -36,6 +40,13 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   \item{output_file}{Optional destination for a forest or SROC plot. Forest
   plots accept PNG, TIFF, or TIF; SROC output formats are supported by
   \code{ggplot2::ggsave}.}
+  \item{summary_override}{Optional summary sensitivity and specificity values
+  used for the forest-plot diamonds.}
+  \item{heterogeneity}{Optional list with sensitivity and specificity elements,
+  each containing \code{i2}, \code{tau2}, and \code{p}.}
+  \item{sens_axis,spec_axis}{Axis tick locations for the two forest plots.}
+  \item{column_widths}{Positive named relative widths for the study, count,
+  text, and forest-plot columns.}
   \item{correction,correction_control}{Zero-cell continuity-correction controls
   passed to \code{mada::reitsma}.}
   \item{method}{Reitsma estimation method: \code{"reml"}, \code{"ml"}, or
