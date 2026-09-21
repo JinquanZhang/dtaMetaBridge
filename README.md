@@ -9,7 +9,7 @@ Rutter-Gatsonis HSROC curves, and prevalence-dependent post-test probabilities.
 ## Installation
 
 ```r
-remotes::install_github("YOUR_GITHUB_USER/dtaMetaBridge")
+remotes::install_github("JinquanZhang/dtaMetaBridge")
 ```
 
 ## Typical workflow
