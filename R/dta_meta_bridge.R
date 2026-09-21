@@ -220,17 +220,21 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
   invisible(output_file)
 }
 
-#' Fit a Reitsma bivariate model and generate SROC plot data.
+#' Fit a bivariate diagnostic model and generate SROC plot data.
 #'
-#' By default, the SROC uses the Rutter-Gatsonis parameterisation. The
+#' By default, the SROC uses the Midas binomial model and curve formula. The
 #' conditional-mean ("naive") curve is available explicitly, but can run in a
 #' non-ROC direction when the study-level covariance is negative.
-fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("ruttergatsonis", "naive"), n_grid = 1000) {
+fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("midas", "ruttergatsonis", "naive"), n_grid = 1000) {
   .assert_dta_data(data, study_col)
   if (nrow(data) < 3) stop("At least three studies are required for the bivariate model.", call. = FALSE)
+  sroc_type <- match.arg(sroc_type)
+  if (sroc_type == "midas") {
+    if (!missing(method) || !missing(correction) || !missing(correction_control)) stop("method and continuity-correction arguments apply only to the mada backends; omit them for midas.", call. = FALSE)
+    return(.fit_midas(data, study_col, n_grid))
+  }
   correction_control <- match.arg(correction_control)
   method <- match.arg(method)
-  sroc_type <- match.arg(sroc_type)
   if (!is.numeric(correction) || length(correction) != 1 || correction < 0) stop("correction must be a single non-negative number.", call. = FALSE)
   if (n_grid < 100) stop("n_grid must be at least 100.", call. = FALSE)
   standardized <- data.frame(study = as.character(data[[study_col]]), TP = data$TP, FP = data$FP, FN = data$FN, TN = data$TN)
@@ -294,8 +298,13 @@ posttest_probability <- function(fit, prevalence = .3, n_sims = 3000, seed = 202
   if (!is.numeric(prevalence) || any(!is.finite(prevalence)) || any(prevalence <= 0 | prevalence >= 1)) stop("prevalence must contain values strictly between 0 and 1.", call. = FALSE)
   if (length(n_sims) != 1 || n_sims < 100 || n_sims != floor(n_sims)) stop("n_sims must be an integer of at least 100.", call. = FALSE)
   model <- fit$model
-  if (!inherits(model, "reitsma")) stop("fit must be returned by fit_bivariate_dta() or fit_bivariate_meta().", call. = FALSE)
-  beta <- stats::coef(model)["(Intercept)", ]; vcov_beta <- as.matrix(stats::vcov(model))
+  if (inherits(model, "glmerMod") && identical(fit$backend, "midas")) {
+    beta <- unname(lme4::fixef(model)) * c(1, -1)
+    transform <- diag(c(1, -1))
+    vcov_beta <- transform %*% as.matrix(stats::vcov(model)) %*% transform
+  } else if (inherits(model, "reitsma")) {
+    beta <- stats::coef(model)["(Intercept)", ]; vcov_beta <- as.matrix(stats::vcov(model))
+  } else stop("fit must be returned by fit_bivariate_dta() or fit_bivariate_meta().", call. = FALSE)
   sens <- stats::plogis(beta[1]); spec <- 1 - stats::plogis(beta[2])
   old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) get(".Random.seed", envir = .GlobalEnv) else NULL
   on.exit({ if (is.null(old_seed)) rm(".Random.seed", envir = .GlobalEnv) else assign(".Random.seed", old_seed, envir = .GlobalEnv) }, add = TRUE)

@@ -11,7 +11,7 @@
 \title{Diagnostic Test Accuracy Meta-Analysis Bridging meta and SROC Models}
 \description{
 Tools to reconstruct a diagnostic 2x2 table from paired \code{meta::metaprop}
-objects, produce paired forest plots, fit a Reitsma bivariate random-effects
+objects, produce paired forest plots, fit a bivariate binomial mixed-effects
 model, draw an SROC curve, and calculate post-test probabilities.
 }
 \usage{
@@ -24,7 +24,7 @@ plot_sensspec_forest(data, output_file = NULL, study_col = "study",
   sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300)
 plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...)
 fit_bivariate_dta(data, study_col = "study", correction = 0.5,
-  correction_control = "single", method = "reml", sroc_type = "ruttergatsonis", n_grid = 1000)
+  correction_control = "single", method = "reml", sroc_type = "midas", n_grid = 1000)
 fit_bivariate_meta(sensitivity_meta, specificity_meta, ...)
 plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   output_file = NULL, width = 6, height = 5, dpi = 300)
@@ -48,10 +48,11 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   \item{column_widths}{Positive named relative widths for the study, count,
   text, and forest-plot columns.}
   \item{correction,correction_control}{Zero-cell continuity-correction controls
-  passed to \code{mada::reitsma}.}
+  passed to \code{mada::reitsma}. Omit for the default Midas backend.}
   \item{method}{Reitsma estimation method: \code{"reml"}, \code{"ml"}, or
-  \code{"fixed"}.}
-  \item{sroc_type}{SROC parameterisation. Defaults to \code{"ruttergatsonis"};
+  \code{"fixed"}. Omit for the default Midas backend.}
+  \item{sroc_type}{Defaults to \code{"midas"}, a binomial GLMM with the
+  Midas curve formula. \code{"ruttergatsonis"} uses the mada backend;
   \code{"naive"} is available as a conditional-mean curve.}
   \item{n_grid}{Number of plotting points for the SROC curve.}
   \item{fit}{An object returned by \code{fit_bivariate_dta} or
@@ -67,16 +68,20 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
 }
 \value{
 \code{dta_from_meta} returns a 2x2 data frame. The fit functions return a list
-containing a \code{mada::reitsma} model, metrics, and plotting data.
+containing a \code{glmerMod} or \code{reitsma} model, metrics, and plotting data.
 \code{posttest_probability} returns a data frame; plotting functions return a
 ggplot object or, for forest plots, invisibly return the output filename.
 }
 \details{
-By default the SROC uses the Rutter-Gatsonis parameterisation supplied by
-\code{mada::sroc}. The conditional-mean \code{"naive"} curve is available via
+The default fits raw binomial counts with lme4 Laplace estimation and applies
+the curve formula in Midas 2.00 (2008-12-21), with variances floored at 0.001.
+Full AUC uses 500-point trapezoidal integration. Contours use the Midas
+F(2, k-2) radius. AUC confidence limits are not estimated. Estimation can
+differ from Stata adaptive quadrature; this is not a verified numerical clone.
+The conditional-mean \code{"naive"} curve is available via
 \code{sroc_type = "naive"}, but can run in a non-ROC direction when the
-study-level covariance is negative. The displayed range is limited to the
-observed false-positive-rate range. The full SROC AUC remains a model summary
+study-level covariance is negative. Midas shows the full curve (including
+extrapolation); mada alternatives show the observed range. The SROC AUC is a model summary
 and should not be equated with a continuous-score ROC AUC from an individual
 study.
 }
