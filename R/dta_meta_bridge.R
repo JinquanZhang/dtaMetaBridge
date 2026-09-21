@@ -222,10 +222,10 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
 
 #' Fit a Reitsma bivariate model and generate SROC plot data.
 #'
-#' By default, the SROC uses mada's conditional-mean ("naive") curve for
-#' compatibility with the requested Stata workflow. Set sroc_type to
-#' "ruttergatsonis" for that alternative parameterisation.
-fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("naive", "ruttergatsonis"), n_grid = 1000) {
+#' By default, the SROC uses the Rutter-Gatsonis parameterisation. The
+#' conditional-mean ("naive") curve is available explicitly, but can run in a
+#' non-ROC direction when the study-level covariance is negative.
+fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("ruttergatsonis", "naive"), n_grid = 1000) {
   .assert_dta_data(data, study_col)
   if (nrow(data) < 3) stop("At least three studies are required for the bivariate model.", call. = FALSE)
   correction_control <- match.arg(correction_control)

@@ -18,14 +18,14 @@ if (requireNamespace("meta", quietly = TRUE)) {
 testthat::expect_error(plot_sensspec_forest(toy_dta, column_widths = c(study = 1)), "column_widths")
 })
 
-testthat::test_that("naive is the default SROC parameterisation", {
+testthat::test_that("Rutter-Gatsonis is the default SROC parameterisation", {
   toy_dta <- data.frame(
     study = LETTERS[1:5],
     TP = c(40, 32, 48, 25, 55), FP = c(8, 15, 10, 20, 12),
     FN = c(10, 18, 7, 15, 9), TN = c(72, 65, 80, 58, 90)
   )
   fit <- fit_bivariate_dta(toy_dta, n_grid = 100)
-  testthat::expect_identical(fit$model_type, "mada::reitsma naive SROC")
+  testthat::expect_identical(fit$model_type, "mada::reitsma ruttergatsonis SROC")
   testthat::expect_true(is.finite(fit$metrics$auc[["est"]]))
   output_file <- tempfile(fileext = ".png")
   testthat::expect_s3_class(plot_sroc(fit, output_file = output_file), "ggplot")

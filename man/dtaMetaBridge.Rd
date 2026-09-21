@@ -24,7 +24,7 @@ plot_sensspec_forest(data, output_file = NULL, study_col = "study",
   sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300)
 plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...)
 fit_bivariate_dta(data, study_col = "study", correction = 0.5,
-  correction_control = "single", method = "reml", sroc_type = "naive", n_grid = 1000)
+  correction_control = "single", method = "reml", sroc_type = "ruttergatsonis", n_grid = 1000)
 fit_bivariate_meta(sensitivity_meta, specificity_meta, ...)
 plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   output_file = NULL, width = 6, height = 5, dpi = 300)
@@ -51,8 +51,8 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   passed to \code{mada::reitsma}.}
   \item{method}{Reitsma estimation method: \code{"reml"}, \code{"ml"}, or
   \code{"fixed"}.}
-  \item{sroc_type}{SROC parameterisation. Defaults to \code{"naive"}; use
-  \code{"ruttergatsonis"} for the alternative parameterisation.}
+  \item{sroc_type}{SROC parameterisation. Defaults to \code{"ruttergatsonis"};
+  \code{"naive"} is available as a conditional-mean curve.}
   \item{n_grid}{Number of plotting points for the SROC curve.}
   \item{fit}{An object returned by \code{fit_bivariate_dta} or
   \code{fit_bivariate_meta}.}
@@ -72,12 +72,13 @@ containing a \code{mada::reitsma} model, metrics, and plotting data.
 ggplot object or, for forest plots, invisibly return the output filename.
 }
 \details{
-By default the SROC uses the conditional-mean (\code{"naive"}) curve supplied
-by \code{mada::sroc}, for compatibility with the requested Stata workflow.
-Use \code{sroc_type = "ruttergatsonis"} for the alternative parameterisation.
-The displayed range is limited to the observed false-positive-rate range. The
-full SROC AUC remains a model summary and should not be equated with a
-continuous-score ROC AUC from an individual study.
+By default the SROC uses the Rutter-Gatsonis parameterisation supplied by
+\code{mada::sroc}. The conditional-mean \code{"naive"} curve is available via
+\code{sroc_type = "naive"}, but can run in a non-ROC direction when the
+study-level covariance is negative. The displayed range is limited to the
+observed false-positive-rate range. The full SROC AUC remains a model summary
+and should not be equated with a continuous-score ROC AUC from an individual
+study.
 }
 \examples{
 \dontrun{
