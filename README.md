@@ -64,6 +64,26 @@ posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
 | --- | --- |
 | ![双森林图](inst/figures/forest-example.png) | ![SROC 曲线](inst/figures/sroc-example.png) |
 
+### 生成示例图的代码
+
+以下代码使用上文的 `dta`、`meta_sens`、`meta_spec` 和 `fit` 对象，直接生成两张图。
+
+```r
+# 双森林图（PNG）
+plot_sensspec_forest_meta(
+  meta_sens, meta_spec,
+  output_file = "forest-example.png",
+  width = 10, res = 300
+)
+
+# SROC 图（PNG）；默认使用 naive SROC
+ggplot2::ggsave(
+  filename = "sroc-example.png",
+  plot = plot_sroc(fit),
+  width = 6, height = 5, dpi = 300
+)
+```
+
 ### 结果如何解释
 
 - 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。
