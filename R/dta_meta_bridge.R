@@ -114,13 +114,18 @@ plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta, ..., u
   plot_sensspec_forest(data, summary_override = summary_override, ...)
 }
 
-.draw_forest_panel <- function(values, lower, upper, y, summary, region, xlim) {
+.draw_forest_panel <- function(values, lower, upper, y, summary, summary_lower, summary_upper, summary_y, region, xlim) {
   x <- function(value) region[1] + (value - xlim[1]) / diff(xlim) * diff(region)
   grid::grid.segments(x0 = grid::unit(x(summary), "npc"), x1 = grid::unit(x(summary), "npc"), y0 = grid::unit(min(y) - .07, "npc"), y1 = grid::unit(max(y) + .04, "npc"), gp = grid::gpar(lty = 3, col = "grey45"))
   for (i in seq_along(y)) {
     grid::grid.segments(x0 = grid::unit(x(lower[i]), "npc"), x1 = grid::unit(x(upper[i]), "npc"), y0 = grid::unit(y[i], "npc"), y1 = grid::unit(y[i], "npc"))
     grid::grid.points(x = grid::unit(x(values[i]), "npc"), y = grid::unit(y[i], "npc"), pch = 15, size = grid::unit(2.2, "mm"), gp = grid::gpar(col = "grey35"))
   }
+  grid::grid.polygon(
+    x = grid::unit(x(c(summary_lower, summary, summary_upper, summary)), "npc"),
+    y = grid::unit(c(summary_y, summary_y + .022, summary_y, summary_y - .022), "npc"),
+    gp = grid::gpar(fill = "#2C3E50", col = "#2C3E50")
+  )
 }
 
 #' Draw a two-panel forest plot for sensitivity and specificity.
@@ -160,8 +165,8 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
   text(.02, summary_y, summary$study, just = "left", gp = grid::gpar(fontface = "bold", cex = .75))
   text(.54, summary_y, ci_label(summary$sens, summary$sens_lwr, summary$sens_upr), gp = grid::gpar(fontface = "bold", cex = .7))
   text(.66, summary_y, ci_label(summary$spec, summary$spec_lwr, summary$spec_upr), gp = grid::gpar(fontface = "bold", cex = .7))
-  .draw_forest_panel(studies$sens, studies$sens_lwr, studies$sens_upr, y, summary$sens, c(.72, .84), range(sens_axis))
-  .draw_forest_panel(studies$spec, studies$spec_lwr, studies$spec_upr, y, summary$spec, c(.86, .98), range(spec_axis))
+  .draw_forest_panel(studies$sens, studies$sens_lwr, studies$sens_upr, y, summary$sens, summary$sens_lwr, summary$sens_upr, summary_y, c(.72, .84), range(sens_axis))
+  .draw_forest_panel(studies$spec, studies$spec_lwr, studies$spec_upr, y, summary$spec, summary$spec_lwr, summary$spec_upr, summary_y, c(.86, .98), range(spec_axis))
   for (axis in list(list(ticks = sens_axis, region = c(.72, .84)), list(ticks = spec_axis, region = c(.86, .98)))) {
     x <- axis$region[1] + (axis$ticks - min(axis$ticks)) / diff(range(axis$ticks)) * diff(axis$region)
     grid::grid.segments(x0 = grid::unit(axis$region[1], "npc"), x1 = grid::unit(axis$region[2], "npc"), y0 = grid::unit(summary_y - .05, "npc"), y1 = grid::unit(summary_y - .05, "npc"))
