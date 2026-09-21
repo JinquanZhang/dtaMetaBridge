@@ -24,7 +24,7 @@ testthat::test_that("Midas curve is monotone, anchored and consistently integrat
     TP = c(40, 32, 48, 25, 55), FP = c(8, 15, 10, 20, 12),
     FN = c(10, 18, 7, 15, 9), TN = c(72, 65, 80, 58, 90)
   )
-  fit <- fit_bivariate_dta(toy_dta, n_grid = 100)
+  fit <- fit_bivariate_dta(toy_dta, n_grid = 100, sroc_type = "midas")
   testthat::expect_identical(fit$backend, "midas")
   testthat::expect_true(all(diff(fit$plot_data$sroc$se) <= 0))
   testthat::expect_equal(fit$plot_data$sroc$se[c(1, 100)], c(1, 0))

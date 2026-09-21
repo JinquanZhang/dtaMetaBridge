@@ -24,10 +24,11 @@ plot_sensspec_forest(data, output_file = NULL, study_col = "study",
   sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300)
 plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...)
 fit_bivariate_dta(data, study_col = "study", correction = 0.5,
-  correction_control = "single", method = "reml", sroc_type = "midas", n_grid = 1000)
+  correction_control = "single", method = "reml", sroc_type = "qmd", n_grid = 1000,
+  seed = 2026, n_mc = 3000)
 fit_bivariate_meta(sensitivity_meta, specificity_meta, ...)
 plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
-  output_file = NULL, width = 6, height = 5, dpi = 300)
+  output_file = NULL, width = 6, height = 5, dpi = 300, ...)
 posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
 }
 \arguments{
@@ -51,10 +52,12 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   passed to \code{mada::reitsma}. Omit for the default Midas backend.}
   \item{method}{Reitsma estimation method: \code{"reml"}, \code{"ml"}, or
   \code{"fixed"}. Omit for the default Midas backend.}
-  \item{sroc_type}{Defaults to \code{"midas"}, a binomial GLMM with the
+  \item{sroc_type}{Defaults to \code{"qmd"}, the original QMD functions.
+  \code{"midas"} selects a binomial GLMM with the
   Midas curve formula. \code{"ruttergatsonis"} uses the mada backend;
   \code{"naive"} is available as a conditional-mean curve.}
   \item{n_grid}{Number of plotting points for the SROC curve.}
+  \item{n_mc}{Fixed-effect Monte Carlo simulations for the QMD AUC.}
   \item{fit}{An object returned by \code{fit_bivariate_dta} or
   \code{fit_bivariate_meta}.}
   \item{width,height,dpi}{Dimensions and resolution used when saving an SROC
@@ -73,7 +76,11 @@ containing a \code{glmerMod} or \code{reitsma} model, metrics, and plotting data
 ggplot object or, for forest plots, invisibly return the output filename.
 }
 \details{
-The default fits raw binomial counts with lme4 Laplace estimation and applies
+The default uses the original QMD fit_metandi and plot_metandi functions.
+Its curve slope is sign(rho) times the random-effect SD ratio; positive
+sensitivity-specificity correlation can therefore yield a reverse curve.
+Its simulated AUC interval conditions on the estimated random-effect covariance.
+The optional Midas backend fits raw binomial counts with lme4 Laplace estimation and applies
 the curve formula in Midas 2.00 (2008-12-21), with variances floored at 0.001.
 Full AUC uses 500-point trapezoidal integration. Contours use the Midas
 F(2, k-2) radius. AUC confidence limits are not estimated. Estimation can

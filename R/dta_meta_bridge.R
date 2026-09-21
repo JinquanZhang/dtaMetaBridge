@@ -225,10 +225,20 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
 #' By default, the SROC uses the Midas binomial model and curve formula. The
 #' conditional-mean ("naive") curve is available explicitly, but can run in a
 #' non-ROC direction when the study-level covariance is negative.
-fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("midas", "ruttergatsonis", "naive"), n_grid = 1000) {
+fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("qmd", "midas", "ruttergatsonis", "naive"), n_grid = 1000, seed = 2026, n_mc = 3000) {
   .assert_dta_data(data, study_col)
   if (nrow(data) < 3) stop("At least three studies are required for the bivariate model.", call. = FALSE)
   sroc_type <- match.arg(sroc_type)
+  if (sroc_type == "qmd") {
+    if (!missing(method) || !missing(correction) || !missing(correction_control)) stop("method and correction arguments apply only to mada backends.", call. = FALSE)
+    standardized <- data.frame(Study = data[[study_col]], data[, c("TP", "FP", "FN", "TN")])
+    result <- fit_metandi(standardized, seed = seed, n_mc = n_mc, n_grid = n_grid)
+    result$backend <- "qmd"
+    result$model_type <- "Original QMD fit_metandi"
+    result$metrics$sensitivity <- result$metrics$se
+    result$metrics$specificity <- result$metrics$sp
+    return(result)
+  }
   if (sroc_type == "midas") {
     if (!missing(method) || !missing(correction) || !missing(correction_control)) stop("method and continuity-correction arguments apply only to the mada backends; omit them for midas.", call. = FALSE)
     return(.fit_midas(data, study_col, n_grid))
@@ -276,7 +286,12 @@ fit_bivariate_meta <- function(sensitivity_meta, specificity_meta, ...) {
 #' Plot an SROC curve with confidence and prediction contours.
 #'
 #' @return A ggplot object, invisibly saved to output_file when supplied.
-plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, output_file = NULL, width = 6, height = 5, dpi = 300) {
+plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, output_file = NULL, width = 6, height = 5, dpi = 300, ...) {
+  if (identical(fit$backend, "qmd") || !is.null(fit$plot_data$sroc_df)) {
+    p <- plot_metandi(fit, show_conf = show_confidence, show_pred = show_prediction, ...)
+    if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
+    return(p)
+  }
   pd <- fit$plot_data; mt <- fit$metrics
   p <- ggplot2::ggplot()
   if (show_prediction) p <- p + ggplot2::geom_polygon(data = pd$prediction, ggplot2::aes(x = sp, y = se), fill = "grey70", alpha = .2) + ggplot2::geom_path(data = pd$prediction, ggplot2::aes(x = sp, y = se), linetype = "dotted", colour = "grey45")
@@ -298,7 +313,7 @@ posttest_probability <- function(fit, prevalence = .3, n_sims = 3000, seed = 202
   if (!is.numeric(prevalence) || any(!is.finite(prevalence)) || any(prevalence <= 0 | prevalence >= 1)) stop("prevalence must contain values strictly between 0 and 1.", call. = FALSE)
   if (length(n_sims) != 1 || n_sims < 100 || n_sims != floor(n_sims)) stop("n_sims must be an integer of at least 100.", call. = FALSE)
   model <- fit$model
-  if (inherits(model, "glmerMod") && identical(fit$backend, "midas")) {
+  if (inherits(model, "glmerMod")) {
     beta <- unname(lme4::fixef(model)) * c(1, -1)
     transform <- diag(c(1, -1))
     vcov_beta <- transform %*% as.matrix(stats::vcov(model)) %*% transform

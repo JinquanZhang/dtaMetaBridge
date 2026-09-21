@@ -1,12 +1,13 @@
 Package: dtaMetaBridge
 Title: Diagnostic Test Accuracy Meta-Analysis That Bridges 'meta' and HSROC Models
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: person(given = "Jinquan", family = "Zhang", role = c("aut", "cre"), email = "jinquan_zhang_0607@163.com")
 Author: Jinquan Zhang [aut, cre]
 Maintainer: Jinquan Zhang <jinquan_zhang_0607@163.com>
 Description: Reconstruct diagnostic 2x2 data from paired 'meta::metaprop'
     objects, create paired sensitivity/specificity forest plots, fit the
-    bivariate binomial mixed model with a Midas-style SROC curve or the
+    bivariate binomial mixed model with the original QMD SROC algorithm,
+    an optional Midas-style SROC curve, or the
     Reitsma bivariate model with alternative SROC parameterisations,
     and calculate post-test probabilities.
 License: MIT + file LICENSE
@@ -14,6 +15,10 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports:
+    dplyr,
+    tidyr,
+    tibble,
+    rlang,
     ellipse,
     ggplot2,
     lme4,
