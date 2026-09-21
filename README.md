@@ -1,13 +1,10 @@
 # dtaMetaBridge
 
-[中文](#中文教程) | [English](#english-tutorial)
+`dtaMetaBridge` 用于衔接配对的 `meta::metaprop()` 对象与标准诊断试验准确性
+meta 分析，提供灵敏度/特异度双森林图、Reitsma 双变量模型、Rutter-Gatsonis
+HSROC 曲线及依赖预检概率的 post-test probability。
 
-`dtaMetaBridge` bridges paired `meta::metaprop()` objects and standard diagnostic
-test-accuracy meta-analysis. It provides a paired sensitivity/specificity forest
-plot, a Reitsma bivariate model with a Rutter-Gatsonis HSROC curve, and
-prevalence-dependent post-test probabilities.
-
-## 中文教程
+## 使用教程
 
 ### 安装
 
@@ -59,9 +56,9 @@ posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
 `meta::metaprop()` 随机效应模型；右图的方块则来自联合 Reitsma 模型，故两组汇总
 灵敏度/特异度数值可能略有差异，这是模型定义不同所致，并非计算不一致。
 
-| 双森林图 / Paired forest plot | SROC 曲线 / SROC curve |
+| 双森林图 | SROC 曲线 |
 | --- | --- |
-| ![Paired forest plot](inst/figures/forest-example.png) | ![SROC plot](inst/figures/sroc-example.png) |
+| ![双森林图](inst/figures/forest-example.png) | ![SROC 曲线](inst/figures/sroc-example.png) |
 
 ### 结果如何解释
 
@@ -71,61 +68,17 @@ posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
 - `fit$metrics$auc`：HSROC 的跨研究区分能力汇总，不能替代单项研究中连续评分的 ROC AUC。
 - post-test probability：区间反映汇总平均准确性的抽样不确定性，不是未来任一新场景的预测区间。
 
-## English tutorial
+## 主要函数
 
-### Install
-
-```r
-install.packages("remotes")       # once only
-remotes::install_github("JinquanZhang/dtaMetaBridge")
-library(dtaMetaBridge)
-```
-
-### Input data
-
-Use one row per study with a study label and the 2x2 counts: `TP`, `FP`, `FN`,
-and `TN`. The `dta` object in the Chinese example above is a complete runnable
-example.
-
-### Workflow from `meta` objects
-
-```r
-library(meta)
-
-meta_sens <- metaprop(TP, TP + FN, studlab = study, data = dta,
-                      method = "GLMM", method.tau = "ML")
-meta_spec <- metaprop(TN, TN + FP, studlab = study, data = dta,
-                      method = "GLMM", method.tau = "ML")
-
-plot_sensspec_forest_meta(meta_sens, meta_spec, output_file = "forest.png")
-
-fit <- fit_bivariate_meta(meta_sens, meta_spec)
-plot_sroc(fit)
-posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
-```
-
-### Key points
-
-- Forest-plot diamonds are separate univariate random-effects summaries retained
-  by `meta`; the bivariate SROC summary point can therefore differ slightly.
-- The SROC is the standard `mada::reitsma()` Rutter-Gatsonis HSROC curve. It is
-  shown only over the observed false-positive-rate range.
-- Post-test probabilities depend on the setting-specific pre-test probability.
-  Their intervals quantify uncertainty in pooled mean accuracy, not prediction
-  intervals for a new setting.
-
-## Functions
-
-| Function | Purpose |
+| 函数 | 用途 |
 | --- | --- |
-| `dta_from_meta()` | Recover a 2x2 data frame from matched sensitivity and specificity `metaprop` objects. |
-| `plot_sensspec_forest_meta()` | Create the paired forest plot while retaining the `meta` random-effects diamonds. |
-| `fit_bivariate_meta()` / `fit_bivariate_dta()` | Fit the standard Reitsma bivariate model from `meta` objects or a 2x2 data frame. |
-| `plot_sroc()` | Draw the HSROC curve, confidence contour, prediction contour, and study points. |
-| `posttest_probability()` | Calculate prevalence-specific PPV and NPV with simulation-based 95% intervals. |
+| `dta_from_meta()` | 从匹配的灵敏度和特异度 `metaprop` 对象还原四格表。 |
+| `plot_sensspec_forest_meta()` | 保留 `meta` 随机效应汇总菱形，绘制双森林图。 |
+| `fit_bivariate_meta()` / `fit_bivariate_dta()` | 从 `meta` 对象或四格表拟合标准 Reitsma 双变量模型。 |
+| `plot_sroc()` | 绘制 HSROC 曲线、置信轮廓、预测轮廓和研究点。 |
+| `posttest_probability()` | 计算不同预检概率下的 PPV、NPV 及模拟法 95% 区间。 |
 
-## Citation and scope
+## 使用范围
 
-This package is intended for reproducible diagnostic-test-accuracy meta-analysis.
-Check study definitions, thresholds, and clinical applicability before pooling;
-the package does not replace a protocol or a risk-of-bias assessment.
+本包用于可重复的诊断试验准确性 meta 分析。在合并前仍需审查研究定义、阈值及临床
+适用性；本包不能替代研究方案或偏倚风险评价。
