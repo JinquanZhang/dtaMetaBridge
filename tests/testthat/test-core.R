@@ -23,4 +23,7 @@ testthat::test_that("naive is the default SROC parameterisation", {
   fit <- fit_bivariate_dta(toy_dta, n_grid = 100)
   testthat::expect_identical(fit$model_type, "mada::reitsma naive SROC")
   testthat::expect_true(is.finite(fit$metrics$auc[["est"]]))
+  output_file <- tempfile(fileext = ".png")
+  testthat::expect_s3_class(plot_sroc(fit, output_file = output_file), "ggplot")
+  testthat::expect_true(file.exists(output_file))
 })

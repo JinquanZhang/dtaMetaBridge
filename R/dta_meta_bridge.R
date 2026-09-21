@@ -225,7 +225,9 @@ fit_bivariate_meta <- function(sensitivity_meta, specificity_meta, ...) {
 }
 
 #' Plot an SROC curve with confidence and prediction contours.
-plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE) {
+#'
+#' @return A ggplot object, invisibly saved to output_file when supplied.
+plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, output_file = NULL, width = 6, height = 5, dpi = 300) {
   pd <- fit$plot_data; mt <- fit$metrics
   p <- ggplot2::ggplot()
   if (show_prediction) p <- p + ggplot2::geom_polygon(data = pd$prediction, ggplot2::aes(x = sp, y = se), fill = "grey70", alpha = .2) + ggplot2::geom_path(data = pd$prediction, ggplot2::aes(x = sp, y = se), linetype = "dotted", colour = "grey45")
@@ -235,6 +237,7 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE) {
     ggplot2::geom_point(data = pd$studies, ggplot2::aes(x = specificity, y = sensitivity), shape = 21, fill = "white", colour = "#7F8C8D", size = 3) +
     ggplot2::geom_point(ggplot2::aes(x = mt$specificity[["est"]], y = mt$sensitivity[["est"]]), shape = 15, size = 4, colour = "#C0392B") +
     ggplot2::scale_x_reverse(limits = c(1, 0), breaks = seq(0, 1, .2)) + ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .2)) + ggplot2::coord_fixed() + ggplot2::labs(x = "Specificity", y = "Sensitivity", title = "SROC") + ggplot2::theme_classic()
+  if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
   p
 }
 

@@ -22,7 +22,8 @@ plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...)
 fit_bivariate_dta(data, study_col = "study", correction = 0.5,
   correction_control = "single", method = "reml", sroc_type = "naive", n_grid = 1000)
 fit_bivariate_meta(sensitivity_meta, specificity_meta, ...)
-plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE)
+plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
+  output_file = NULL, width = 6, height = 5, dpi = 300)
 posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
 }
 \arguments{
@@ -32,7 +33,9 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   \code{meta::metaprop} objects, where event/n encode TP/(TP + FN) and
   TN/(TN + FP), respectively.}
   \item{study_col}{Name of the study-label column.}
-  \item{output_file}{Optional PNG, TIFF, or TIF destination for the forest plot.}
+  \item{output_file}{Optional destination for a forest or SROC plot. Forest
+  plots accept PNG, TIFF, or TIF; SROC output formats are supported by
+  \code{ggplot2::ggsave}.}
   \item{correction,correction_control}{Zero-cell continuity-correction controls
   passed to \code{mada::reitsma}.}
   \item{method}{Reitsma estimation method: \code{"reml"}, \code{"ml"}, or
@@ -42,6 +45,8 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   \item{n_grid}{Number of plotting points for the SROC curve.}
   \item{fit}{An object returned by \code{fit_bivariate_dta} or
   \code{fit_bivariate_meta}.}
+  \item{width,height,dpi}{Dimensions and resolution used when saving an SROC
+  plot with \code{output_file}.}
   \item{show_confidence,show_prediction}{Whether to display the respective
   95 percent regions.}
   \item{prevalence}{One or more pre-test probabilities strictly between zero

@@ -60,29 +60,28 @@ posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
 `meta::metaprop()` 随机效应模型；右图的方块则来自联合 Reitsma 模型，故两组汇总
 灵敏度/特异度数值可能略有差异，这是模型定义不同所致，并非计算不一致。
 
-| 双森林图 | SROC 曲线 |
-| --- | --- |
-| ![双森林图](inst/figures/forest-example.png) | ![SROC 曲线](inst/figures/sroc-example.png) |
+下表左侧为生成代码，右侧为对应输出图。代码使用上文的 `dta`、`meta_sens`、
+`meta_spec` 和 `fit` 对象。
 
-### 生成示例图的代码
-
-以下代码使用上文的 `dta`、`meta_sens`、`meta_spec` 和 `fit` 对象，直接生成两张图。
-
-```r
-# 双森林图（PNG）
-plot_sensspec_forest_meta(
+<table>
+<tr><th>绘图代码</th><th>示例图</th></tr>
+<tr>
+<td><pre><code>plot_sensspec_forest_meta(
   meta_sens, meta_spec,
   output_file = "forest-example.png",
   width = 10, res = 300
-)
-
-# SROC 图（PNG）；默认使用 naive SROC
-ggplot2::ggsave(
-  filename = "sroc-example.png",
-  plot = plot_sroc(fit),
+)</code></pre></td>
+<td><img src="inst/figures/forest-example.png" alt="双森林图" width="600"></td>
+</tr>
+<tr>
+<td><pre><code>plot_sroc(
+  fit,
+  output_file = "sroc-example.png",
   width = 6, height = 5, dpi = 300
-)
-```
+)</code></pre></td>
+<td><img src="inst/figures/sroc-example.png" alt="SROC 曲线" width="450"></td>
+</tr>
+</table>
 
 ### 结果如何解释
 
