@@ -239,10 +239,9 @@ plot_metandi <- function(model_obj, digits = 2,
   }
   
   # 6. Print summary results to the console
-  cat(sprintf("\n=== Bivariate GLMM Meta-Analysis Results ===\n"))
+  cat(sprintf("\n=== Bivariate Meta-Analysis Results ===\n"))
   cat(sprintf("%s\n%s\n%s\n", str_se, str_sp, str_auc))
   cat(sprintf("============================================\n"))
   
   return(p)
 }
-

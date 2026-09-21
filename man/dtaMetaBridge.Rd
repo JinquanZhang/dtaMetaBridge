@@ -11,7 +11,7 @@
 \title{Diagnostic Test Accuracy Meta-Analysis Bridging meta and SROC Models}
 \description{
 Tools to reconstruct a diagnostic 2x2 table from paired \code{meta::metaprop}
-objects, produce paired forest plots, fit a bivariate binomial mixed-effects
+objects, produce paired forest plots, fit a Reitsma bivariate random-effects
 model, draw an SROC curve, and calculate post-test probabilities.
 }
 \usage{
@@ -24,7 +24,7 @@ plot_sensspec_forest(data, output_file = NULL, study_col = "study",
   sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300)
 plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...)
 fit_bivariate_dta(data, study_col = "study", correction = 0.5,
-  correction_control = "single", method = "reml", sroc_type = "qmd", n_grid = 1000,
+  correction_control = "single", method = "reml", sroc_type = "ruttergatsonis", n_grid = 1000,
   seed = 2026, n_mc = 3000)
 fit_bivariate_meta(sensitivity_meta, specificity_meta, ...)
 plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
@@ -52,7 +52,8 @@ posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
   passed to \code{mada::reitsma}. Omit for the default Midas backend.}
   \item{method}{Reitsma estimation method: \code{"reml"}, \code{"ml"}, or
   \code{"fixed"}. Omit for the default Midas backend.}
-  \item{sroc_type}{Defaults to \code{"qmd"}, the original QMD functions.
+  \item{sroc_type}{Defaults to \code{"ruttergatsonis"}, the Reitsma model
+  with Rutter-Gatsonis HSROC parameterisation. \code{"qmd"} selects the original QMD functions.
   \code{"midas"} selects a binomial GLMM with the
   Midas curve formula. \code{"ruttergatsonis"} uses the mada backend;
   \code{"naive"} is available as a conditional-mean curve.}
@@ -76,8 +77,13 @@ containing a \code{glmerMod} or \code{reitsma} model, metrics, and plotting data
 ggplot object or, for forest plots, invisibly return the output filename.
 }
 \details{
-The default uses the original QMD fit_metandi and plot_metandi functions.
-Its curve slope is sign(rho) times the random-effect SD ratio; positive
+The default uses mada Reitsma REML estimation and Rutter-Gatsonis HSROC
+parameterisation for a model without covariates (Reitsma et al., 2005;
+Rutter and Gatsonis, 2001; Harbord et al., 2007). Estimation uses the
+logit-normal approximation, not the original Bayesian likelihood.
+AUC integrates the fitted curve from FPR 0 to 1; pAUC is the unstandardised
+integral over observed FPR. No AUC confidence interval is estimated.
+The optional QMD curve slope is sign(rho) times the random-effect SD ratio; positive
 sensitivity-specificity correlation can therefore yield a reverse curve.
 Its simulated AUC interval conditions on the estimated random-effect covariance.
 The optional Midas backend fits raw binomial counts with lme4 Laplace estimation and applies

@@ -1,8 +1,8 @@
 # dtaMetaBridge
 
 `dtaMetaBridge` 用于衔接配对的 `meta::metaprop()` 对象与标准诊断试验准确性
-meta 分析，提供双森林图、双变量二项 GLMM、原始 QMD 的 SROC 函数和检验后概率。
-0.3.0 默认使用 `HFphf_meta analysis.qmd` 中的 `fit_metandi()` / `plot_metandi()`。
+meta 分析，提供双森林图、Reitsma 双变量随机效应模型、Rutter–Gatsonis HSROC 曲线和检验后概率。
+0.4.0 默认调用 `mada::reitsma(method = "reml")` 与 `mada::sroc(type = "ruttergatsonis")`。
 
 ## 使用教程
 
@@ -45,13 +45,12 @@ meta_spec <- metaprop(TN, TN + FP, studlab = study, data = dta,
 plot_sensspec_forest_meta(meta_sens, meta_spec,
                            output_file = "forest.png")
 
-# 3. 默认采用原始 QMD 的拟合和绘图函数。
+# 3. Reitsma 双变量模型 + Rutter–Gatsonis HSROC（默认）。
 fit <- fit_bivariate_meta(meta_sens, meta_spec)
 plot_sroc(fit)
 
-# 也可以直接使用 QMD 中的原函数名：
-# fit <- fit_metandi(dta)
-# plot_metandi(fit)
+# 显式指定方法也可以：
+# fit <- fit_bivariate_meta(meta_sens, meta_spec, sroc_type = "ruttergatsonis")
 
 # 4. 按预检概率计算阳性和阴性后的患病概率及 95% 不确定性区间。
 posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
@@ -60,7 +59,7 @@ posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
 ### 示例图
 
 下图由上面的示例数据和函数生成。左图的森林图汇总值来自两个独立的
-`meta::metaprop()` 随机效应模型；SROC 的方块来自联合二项 GLMM，故两组汇总
+`meta::metaprop()` 随机效应模型；SROC 的方块来自联合 Reitsma 模型，故两组汇总
 灵敏度/特异度数值可能略有差异，这是模型定义不同所致，并非计算不一致。
 
 下表左侧为生成代码，右侧为对应输出图。代码使用上文的 `dta`、`meta_sens`、
@@ -110,10 +109,10 @@ plot_sensspec_forest_meta(
 ### 结果如何解释
 
 - 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。
-- SROC：默认 `sroc_type = "qmd"`，使用所提供 QMD 的原始函数，保留研究编号、
-  图例、汇总值与 AUC 模拟区间。`seed`、`n_mc` 和 `n_grid` 控制随机种子、模拟次数及网格。
-  `midas`、`ruttergatsonis` 和 `naive` 仍可显式选择。
-  `method`、`correction` 和 `correction_control` 仅用于两个 `mada` 后端。
+- SROC：默认 `sroc_type = "ruttergatsonis"`。以 REML 拟合 logit 灵敏度与 logit 假阳性率的双变量正态随机效应模型，按 HSROC 参数化生成曲线。默认连续性校正为 0.5，仅对含零单元格的研究实施。
+- 曲线默认只显示观察到的 FPR 范围；完整 AUC 对同一曲线在 FPR 0–1 上积分，包含范围外的模型外推。`pauc` 是观察范围内的未标准化面积。
+- AUC 区间暂不估计（`NA`）；图中置信轮廓针对联合汇总点，不是整条 SROC 的置信带。
+- `qmd`、`midas`、`naive` 仅为显式可选方法；不是本文默认方法。
 - `fit$metrics$auc`：跨研究的 SROC 区分能力汇总，不能替代单项研究中连续评分的 ROC AUC。
 - post-test probability：区间反映汇总平均准确性的抽样不确定性，不是未来任一新场景的预测区间。
 
@@ -123,47 +122,32 @@ plot_sensspec_forest_meta(
 | --- | --- |
 | `dta_from_meta()` | 从匹配的灵敏度和特异度 `metaprop` 对象还原四格表。 |
 | `plot_sensspec_forest_meta()` | 保留 `meta` 随机效应汇总菱形，绘制双森林图。 |
-| `fit_bivariate_meta()` / `fit_bivariate_dta()` | 从 `meta` 对象或四格表拟合双变量模型；默认原始 QMD 算法。 |
-| `fit_metandi()` / `plot_metandi()` | 直接使用 QMD 中的原函数及其图例参数。 |
+| `fit_bivariate_meta()` / `fit_bivariate_dta()` | 从 `meta` 对象或四格表拟合双变量模型；默认 Reitsma / Rutter–Gatsonis 方法。 |
+| `fit_metandi()` / `plot_metandi()` | 保留原 QMD 函数供历史结果复现；不作为推荐默认算法。 |
 | `plot_sroc()` | 绘制 HSROC 曲线、置信轮廓、预测轮廓和研究点。 |
 | `posttest_probability()` | 计算不同预检概率下的 PPV、NPV 及模拟法 95% 区间。 |
 
-## 使用范围
+## 方法与论文引用
 
-### 原始 QMD 方法（默认，0.3.0）
+推荐方法为 Reitsma 双变量模型及 Rutter–Gatsonis HSROC 参数化。实际估计使用
+`mada` 的 logit 正态近似与 REML；不是直接拟合原始 Rutter–Gatsonis 论文的 Bayesian 模型。
+Harbord 的参数映射适用于此处无协变量模型；这不代表不同似然与估计软件会得到相同数值。
+少研究、稀疏数据或方差边界时应检查模型稳定性。
 
-原始算法保持不变：在 logit 特异度上，曲线斜率为
-`sign(rho_re) * sigma_se / sigma_sp`。这不是 `mada` 的 naive 条件均值斜率，
-也不是本包可选 Midas 后端的固定负斜率。相关性为正时，原函数仍可能画出反向曲线；
-移植时不会自动更改其符号。
-AUC 点估计为固定效应模拟所得面积的均值，区间未包含研究间方差参数的不确定性。
-原函数执行 `set.seed(seed)`，会改变全局随机数状态。
+### 可用于论文的方法描述
 
-```r
-fit <- fit_metandi(dta, seed = 2026, n_mc = 3000, n_grid = 1000)
-plot_metandi(fit, show_conf = TRUE, show_pred = TRUE, show_legend = TRUE)
-# 原函数绘图样式也支持直接保存：
-plot_sroc(fit, output_file = "sroc-qmd.png", width = 6, height = 6)
-```
+采用 Reitsma 双变量随机效应模型联合汇总灵敏度与特异度，使用 R 包 mada 以限制性最大似然法估计。
+根据无协变量双变量模型与 HSROC 的参数对应关系，以 Rutter–Gatsonis 参数化绘制 SROC 曲线。
+含零单元格的研究使用 0.5 连续性校正；报告联合汇总点的 95% 置信区域和近似 95% 预测区域。
+AUC 通过对拟合 SROC 曲线在假阳性率 0–1 范围内数值积分计算。
 
-### Midas 可选方法与复现边界（`sroc_type = "midas"`）
+### 参考文献
 
-依据本机 `midas.ado` 2.00（2008-12-21）的 SUMMARY ROC CURVE 段，令
-`mu_se`、`mu_sp` 为两项 logit 均值，`v_se`、`v_sp` 为对应研究间方差：
+1. Reitsma JB, et al. Bivariate analysis of sensitivity and specificity produces informative summary measures in diagnostic reviews. *J Clin Epidemiol*. 2005;58:982–990. [doi:10.1016/j.jclinepi.2005.02.022](https://doi.org/10.1016/j.jclinepi.2005.02.022)
+2. Rutter CM, Gatsonis CA. A hierarchical regression approach to meta-analysis of diagnostic test accuracy evaluations. *Stat Med*. 2001;20:2865–2884. [doi:10.1002/sim.942](https://doi.org/10.1002/sim.942)
+3. Harbord RM, et al. A unification of models for meta-analysis of diagnostic accuracy studies. *Biostatistics*. 2007;8:239–251. [doi:10.1093/biostatistics/kxl004](https://doi.org/10.1093/biostatistics/kxl004)
 
-```r
-b <- (max(0.001, v_sp) / max(0.001, v_se))^0.25
-a <- mu_se * b + mu_sp / b
-sensitivity <- plogis((a - qlogis(specificity) / b) / b)
-```
+软件实现见 [mada 文档](https://search.r-project.org/CRAN/refmans/mada/help/reitsma-class.html)。
+R 中可运行 `citation("dtaMetaBridge")` 查看方法文献，`citation("mada")` 查看软件引用。
 
-该曲线经过联合汇总点，以 500 个等距点在特异度 0–1 上作梯形积分得到 AUC。
-这里的 Midas 公式与 `mada` 的 `naive` 条件均值曲线不同；此前将两者等同的说明已更正。
-R 端使用 `lme4::glmer(nAGQ = 1)` 的 Laplace 估计；Midas 的自适应积分配置可能得到不同估计。
-本次验证覆盖公式、端点、单调性、汇总点及数值积分，尚未完成 Stata 实际运行的数值对照，
-因此不能宣称结果逐位一致。边界或不收敛信息见 `fit$diagnostics`。
-旧版 Midas 使用绘图点数构造 AUC 区间，本包不把它作为统计不确定性区间，AUC 上下限保留 `NA`。
-`pauc` 为观察到的特异度范围内的未标准化部分面积。
-
-本包用于可重复的诊断试验准确性 meta 分析。在合并前仍需审查研究定义、阈值及临床
-适用性；本包不能替代研究方案或偏倚风险评价。
+本包不能替代研究方案、原始四格表核验或偏倚风险评价。

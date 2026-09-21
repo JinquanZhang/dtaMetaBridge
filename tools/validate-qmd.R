@@ -14,7 +14,7 @@ for (name in c("df_h2in", "df_h2out", "df_hfain", "df_hfaout")) {
   eval(parse(text = block)[[1]], envir = env)
   d <- env[[name]]
   ref <- original$fit_metandi(d)
-  got <- fit_bivariate_dta(d)
+  got <- fit_bivariate_dta(d, sroc_type = "qmd")
   stopifnot(isTRUE(all.equal(got$metrics[c("se", "sp", "auc")], ref$metrics, tolerance = 1e-10)),
     isTRUE(all.equal(got$plot_data, ref$plot_data, tolerance = 1e-10)))
   p <- plot_sroc(got, show_legend = TRUE)

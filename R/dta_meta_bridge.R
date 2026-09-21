@@ -222,10 +222,10 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
 
 #' Fit a bivariate diagnostic model and generate SROC plot data.
 #'
-#' By default, the SROC uses the Midas binomial model and curve formula. The
+#' By default, the SROC uses Reitsma REML and the Rutter-Gatsonis curve. The
 #' conditional-mean ("naive") curve is available explicitly, but can run in a
 #' non-ROC direction when the study-level covariance is negative.
-fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("qmd", "midas", "ruttergatsonis", "naive"), n_grid = 1000, seed = 2026, n_mc = 3000) {
+fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("ruttergatsonis", "qmd", "midas", "naive"), n_grid = 1000, seed = 2026, n_mc = 3000) {
   .assert_dta_data(data, study_col)
   if (nrow(data) < 3) stop("At least three studies are required for the bivariate model.", call. = FALSE)
   sroc_type <- match.arg(sroc_type)
@@ -259,19 +259,23 @@ fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, corre
     points <- ellipse::ellipse(covariance, centre = mu, level = .95)
     data.frame(sp = 1 - stats::plogis(points[, 2]), se = stats::plogis(points[, 1]))
   }
-  full_fpr_grid <- seq(.001, .999, length.out = n_grid)
+  if (any(!is.finite(fit$Psi)) || any(diag(fit$Psi) <= 0)) stop("SROC requires positive between-study variances; inspect the fitted model or use a different model.", call. = FALSE)
   observed_fpr <- standardized$FP / (standardized$FP + standardized$TN)
   display_fpr_grid <- seq(max(.001, min(observed_fpr)), min(.999, max(observed_fpr)), length.out = n_grid)
   standard_sroc <- mada::sroc(fit, fpr = display_fpr_grid, type = sroc_type)
-  auc_result <- mada::AUC(fit, fpr = full_fpr_grid, sroc.type = sroc_type)
+  curve_function <- mada::sroc(fit, type = sroc_type, return_function = TRUE)
+  auc <- stats::integrate(curve_function, lower = 0, upper = 1, rel.tol = 1e-8)$value
+  observed_range <- range(observed_fpr)
+  pauc <- if (diff(observed_range) == 0) 0 else stats::integrate(curve_function, observed_range[1], observed_range[2], rel.tol = 1e-8)$value
   list(
     model = fit,
     model_type = paste("mada::reitsma", sroc_type, "SROC"),
+    backend = "mada",
     metrics = list(
       sensitivity = sensitivity,
       specificity = specificity,
-      auc = c(est = auc_result[["AUC"]], lwr = NA_real_, upr = NA_real_),
-      pauc = unname(auc_result[["pAUC"]])
+      auc = c(est = auc, lwr = NA_real_, upr = NA_real_),
+      pauc = pauc
     ),
     plot_data = list(confidence = to_roc_ellipse(fixed_vcov), prediction = to_roc_ellipse(fixed_vcov + fit$Psi), sroc = data.frame(sp = 1 - standard_sroc[, 1], se = standard_sroc[, 2]), studies = data.frame(Study = standardized$study, specificity = data$TN / (data$TN + data$FP), sensitivity = data$TP / (data$TP + data$FN))),
     random_effects = list(covariance = fit$Psi)
@@ -287,6 +291,18 @@ fit_bivariate_meta <- function(sensitivity_meta, specificity_meta, ...) {
 #'
 #' @return A ggplot object, invisibly saved to output_file when supplied.
 plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, output_file = NULL, width = 6, height = 5, dpi = 300, ...) {
+  if (identical(fit$backend, "mada")) {
+    pd <- fit$plot_data
+    adapted <- list(metrics = list(se = fit$metrics$sensitivity, sp = fit$metrics$specificity, auc = fit$metrics$auc),
+      plot_data = list(conf_df = pd$confidence, pred_df = pd$prediction, sroc_df = pd$sroc,
+        study_df = data.frame(Study = pd$studies$Study, study_id = seq_len(nrow(pd$studies)), se = pd$studies$sensitivity, sp = pd$studies$specificity)))
+    # Preserve the requested QMD presentation, using only the standard-model results.
+    args <- utils::modifyList(list(model_obj = adapted, show_conf = show_confidence, show_pred = show_prediction,
+      custom_auc = sprintf("AUC: %.3f (full curve)", fit$metrics$auc[["est"]])), list(...))
+    p <- do.call(plot_metandi, args)
+    if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
+    return(p)
+  }
   if (identical(fit$backend, "qmd") || !is.null(fit$plot_data$sroc_df)) {
     p <- plot_metandi(fit, show_conf = show_confidence, show_pred = show_prediction, ...)
     if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
