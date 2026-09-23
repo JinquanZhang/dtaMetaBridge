@@ -18,6 +18,39 @@ if (requireNamespace("meta", quietly = TRUE)) {
 testthat::expect_error(plot_sensspec_forest(toy_dta, column_widths = c(study = 1)), "column_widths")
 })
 
+testthat::test_that("meta forest passes heterogeneity size and position to text grobs", {
+  d <- data.frame(study = c("A", "B", "C"), TP = c(8, 12, 16),
+                  FP = c(3, 2, 1), FN = c(2, 4, 3), TN = c(17, 18, 20))
+  se <- meta::metaprop(TP, TP + FN, studlab = study, data = d, method = "Inverse")
+  sp <- meta::metaprop(TN, TN + FP, studlab = study, data = d, method = "Inverse")
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  plot_sensspec_forest_meta(se, sp, heterogeneity_cex = .8,
+                            heterogeneity_x = .03, heterogeneity_y = c(.20, .15))
+  labels <- Filter(function(g) inherits(g, "text") &&
+                     startsWith(as.character(g$label), "Heterogeneity for"),
+                   as.list(grid::grid.grab()$children))
+  testthat::expect_length(labels, 2)
+  testthat::expect_equal(unname(vapply(labels, function(g) g$gp$cex, numeric(1))), c(.8, .8))
+  testthat::expect_equal(unname(vapply(labels, function(g) as.numeric(g$x), numeric(1))), c(.03, .03))
+  testthat::expect_equal(unname(vapply(labels, function(g) as.numeric(g$y), numeric(1))), c(.20, .15))
+  for (bad in list(0, NA_real_, Inf, c(.5, .7), "large")) {
+    testthat::expect_error(plot_sensspec_forest(d, heterogeneity_cex = bad), "heterogeneity_cex")
+  }
+  testthat::expect_error(plot_sensspec_forest(d, heterogeneity_x = -1), "heterogeneity_x")
+  testthat::expect_error(plot_sensspec_forest(d, heterogeneity_y = .2), "heterogeneity_y")
+  testthat::expect_error(plot_sensspec_forest(d, heterogeneity_y = c(.2, NA)), "heterogeneity_y")
+  for (family in c("serif", "sans")) {
+    plot_sensspec_forest_meta(se, sp, font_family = family)
+    all_text <- Filter(function(g) inherits(g, "text"), as.list(grid::grid.grab()$children))
+    testthat::expect_gt(length(all_text), 0)
+    testthat::expect_true(all(vapply(all_text, function(g) identical(g$gp$fontfamily, family), logical(1))))
+  }
+  for (bad in list("", NA_character_, c("serif", "sans"), 1)) {
+    testthat::expect_error(plot_sensspec_forest(d, font_family = bad), "font_family")
+  }
+})
+
 testthat::test_that("Midas curve is monotone, anchored and consistently integrated", {
   toy_dta <- data.frame(
     study = LETTERS[1:5],

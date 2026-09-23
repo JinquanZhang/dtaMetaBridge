@@ -1,6 +1,6 @@
 Package: dtaMetaBridge
 Title: Diagnostic Test Accuracy Meta-Analysis That Bridges 'meta' and HSROC Models
-Version: 0.4.0
+Version: 1.0.0
 Authors@R: person(given = "Jinquan", family = "Zhang", role = c("aut", "cre"), email = "jinquan_zhang_0607@163.com")
 Author: Jinquan Zhang [aut, cre]
 Maintainer: Jinquan Zhang <jinquan_zhang_0607@163.com>
@@ -11,6 +11,7 @@ Description: Reconstruct diagnostic 2x2 data from paired 'meta::metaprop'
     and calculate post-test probabilities.
 License: MIT + file LICENSE
 Encoding: UTF-8
+Depends: R (>= 4.1.0)
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports:

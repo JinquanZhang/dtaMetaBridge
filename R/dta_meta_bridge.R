@@ -127,22 +127,24 @@ plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta, ..., u
   data <- dta_from_meta(sensitivity_meta, specificity_meta)
   summary_override <- if (use_meta_summary) .meta_summary_override(sensitivity_meta, specificity_meta) else NULL
   heterogeneity <- list(sensitivity = .meta_heterogeneity(sensitivity_meta), specificity = .meta_heterogeneity(specificity_meta))
-  plot_sensspec_forest(data, summary_override = summary_override, heterogeneity = heterogeneity, ...)
+  study_weights <- list(sensitivity = sensitivity_meta$w.random,
+    specificity = specificity_meta$w.random[match(data$study, specificity_meta$studlab)])
+  plot_sensspec_forest(data, summary_override = summary_override, heterogeneity = heterogeneity, study_weights = study_weights, ...)
 }
 
-.draw_forest_panel <- function(values, lower, upper, weights, y, summary, summary_lower, summary_upper, summary_y, region, xlim) {
+.draw_forest_panel <- function(values, lower, upper, weights, y, summary, summary_lower, summary_upper, summary_y, region, xlim, square_col = "grey70", square_max_mm = 5, ci_col = "black", ci_lwd = 1.2, diamond_col = "#C00000") {
   x <- function(value) region[1] + (value - xlim[1]) / diff(xlim) * diff(region)
-  grid::grid.segments(x0 = grid::unit(x(summary), "npc"), x1 = grid::unit(x(summary), "npc"), y0 = grid::unit(min(y) - .07, "npc"), y1 = grid::unit(max(y) + .04, "npc"), gp = grid::gpar(lty = 3, lwd = 1.2, col = "black"))
-  square_size <- 1.8 + 3.2 * sqrt(weights / max(weights))
+  grid::grid.segments(x0 = grid::unit(x(summary), "npc"), x1 = grid::unit(x(summary), "npc"), y0 = grid::unit(min(y) - .07, "npc"), y1 = grid::unit(max(y) + .02, "npc"), gp = grid::gpar(lty = 3, lwd = 1.2, col = "black"))
+  square_size <- square_max_mm * sqrt(weights / max(weights))
   for (i in seq_along(y)) {
-    grid::grid.segments(x0 = grid::unit(x(lower[i]), "npc"), x1 = grid::unit(x(upper[i]), "npc"), y0 = grid::unit(y[i], "npc"), y1 = grid::unit(y[i], "npc"), gp = grid::gpar(lwd = 1.2, col = "black"))
-    grid::grid.rect(x = grid::unit(x(values[i]), "npc"), y = grid::unit(y[i], "npc"), width = grid::unit(square_size[i], "mm"), height = grid::unit(square_size[i], "mm"), gp = grid::gpar(fill = "grey70", col = NA))
-    grid::grid.points(x = grid::unit(x(values[i]), "npc"), y = grid::unit(y[i], "npc"), pch = 3, size = grid::unit(2.1, "mm"), gp = grid::gpar(col = "black", lwd = 1.1))
+    grid::grid.rect(x = grid::unit(x(values[i]), "npc"), y = grid::unit(y[i], "npc"), width = grid::unit(square_size[i], "mm"), height = grid::unit(square_size[i], "mm"), gp = grid::gpar(fill = square_col, col = NA))
+    grid::grid.segments(x0 = grid::unit(x(lower[i]), "npc"), x1 = grid::unit(x(upper[i]), "npc"), y0 = grid::unit(y[i], "npc"), y1 = grid::unit(y[i], "npc"), gp = grid::gpar(lwd = ci_lwd, col = ci_col))
+    grid::grid.segments(x0 = grid::unit(x(values[i]), "npc"), x1 = grid::unit(x(values[i]), "npc"), y0 = grid::unit(y[i], "npc") - grid::unit(1, "mm"), y1 = grid::unit(y[i], "npc") + grid::unit(1, "mm"), gp = grid::gpar(col = ci_col, lwd = ci_lwd))
   }
   grid::grid.polygon(
     x = grid::unit(x(c(summary_lower, summary, summary_upper, summary)), "npc"),
     y = grid::unit(c(summary_y, summary_y + .022, summary_y, summary_y - .022), "npc"),
-    gp = grid::gpar(fill = "#C00000", col = "#C00000")
+    gp = grid::gpar(fill = diamond_col, col = diamond_col)
   )
 }
 
@@ -151,7 +153,11 @@ plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta, ..., u
 #' @param summary_override Named list containing sens/sens_lwr/sens_upr and/or
 #'   spec/spec_lwr/spec_upr, usually from fit_forest_summary().
 #' @return Invisibly, the supplied output filename (or NULL when drawn to the active device).
-plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", summary_override = NULL, heterogeneity = NULL, sens_axis = seq(0, 1, .2), spec_axis = seq(0, 1, .2), column_widths = c(study = 2.8, tp = .5, fp = .5, fn = .5, tn = .5, sens_text = 1.6, spec_text = 1.6, sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300) {
+plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", summary_override = NULL, heterogeneity = NULL, sens_axis = seq(0, 1, .2), spec_axis = seq(0, 1, .2), column_widths = c(study = 2.8, tp = .5, fp = .5, fn = .5, tn = .5, sens_text = 1.6, spec_text = 1.6, sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300, heterogeneity_cex = .66, heterogeneity_x = .015, heterogeneity_y = NULL, font_family = "serif", study_weights = NULL,
+  header_cex = .86, study_cex = .72, ci_text_cex = .68,
+  summary_cex = .78, summary_count_cex = .75, summary_ci_cex = .7,
+  axis_cex = .68, row_gap = NULL, square_col = "grey70", square_max_mm = 5,
+  ci_col = "black", ci_lwd = 1.2, diamond_col = "#C00000") {
   forest <- .forest_data(data, study_col, summary_override = summary_override)
   studies <- forest$studies
   summary <- forest$summary
@@ -161,6 +167,50 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
     stop("column_widths must be a positive named vector with study, tp, fp, fn, tn, sens_text, spec_text, sens_plot and spec_plot.", call. = FALSE)
   }
   if (is.null(height)) height <- max(3.8, 1 + .28 * n)
+  if (!is.character(font_family) || length(font_family) != 1L || is.na(font_family) || !nzchar(trimws(font_family))) {
+    stop("font_family must be one non-empty font family name supported by the graphics device.", call. = FALSE)
+  }
+  if (!is.numeric(heterogeneity_cex) || length(heterogeneity_cex) != 1L || !is.finite(heterogeneity_cex) || heterogeneity_cex <= 0) {
+    stop("heterogeneity_cex must be one positive finite number.", call. = FALSE)
+  }
+  if (!is.numeric(heterogeneity_x) || length(heterogeneity_x) != 1L || !is.finite(heterogeneity_x) || heterogeneity_x < 0 || heterogeneity_x > 1) {
+    stop("heterogeneity_x must be one finite number between 0 and 1.", call. = FALSE)
+  }
+  if (!is.null(heterogeneity_y) && (!is.numeric(heterogeneity_y) || length(heterogeneity_y) != 2L || any(!is.finite(heterogeneity_y)) || any(heterogeneity_y < 0 | heterogeneity_y > 1))) {
+    stop("heterogeneity_y must be NULL or two finite numbers between 0 and 1 (sensitivity, specificity).", call. = FALSE)
+  }
+  sizes <- list(header_cex = header_cex, study_cex = study_cex, ci_text_cex = ci_text_cex,
+    summary_cex = summary_cex, summary_count_cex = summary_count_cex, summary_ci_cex = summary_ci_cex,
+    axis_cex = axis_cex, square_max_mm = square_max_mm, ci_lwd = ci_lwd)
+  for (name in names(sizes)) {
+    value <- sizes[[name]]
+    if (!is.numeric(value) || length(value) != 1L || !is.finite(value) || value <= 0)
+      stop(name, " must be one positive finite number.", call. = FALSE)
+  }
+  colors <- list(square_col = square_col, ci_col = ci_col, diamond_col = diamond_col)
+  for (name in names(colors)) {
+    value <- colors[[name]]
+    if (!is.character(value) || length(value) != 1L || is.na(value) ||
+        inherits(try(grDevices::col2rgb(value), silent = TRUE), "try-error"))
+      stop(name, " must be one valid R color.", call. = FALSE)
+  }
+  if (is.null(row_gap)) row_gap <- min(.055, .52 / max(1, n - 1))
+  if (!is.numeric(row_gap) || length(row_gap) != 1L || !is.finite(row_gap) || row_gap <= 0 || row_gap * (n - 1) > .52 + 1e-12)
+    stop("row_gap must be positive and fit the study rows within 0.52 of the plot height; reduce row_gap for more studies.", call. = FALSE)
+  if (!is.null(study_weights) && (!is.list(study_weights) || !all(c("sensitivity", "specificity") %in% names(study_weights)))) {
+    stop("study_weights must be NULL or a list with sensitivity and specificity weights.", call. = FALSE)
+  }
+  panel_weights <- lapply(c("sensitivity", "specificity"), function(label) {
+    w <- study_weights[[label]]
+    if (is.null(w) || (is.atomic(w) && length(w) == n && all(is.na(w)))) {
+      warning(label, ": random-effects study weights unavailable (e.g. GLMM); using equal-size squares, not sample sizes or estimated weights.", call. = FALSE)
+      return(rep(1, n))
+    }
+    if (!is.numeric(w) || length(w) != n || any(!is.finite(w)) || any(w < 0) || !any(w > 0)) {
+      stop(label, ": weights must be finite, non-negative, aligned to all studies, with at least one positive value.", call. = FALSE)
+    }
+    w
+  })
   if (!is.null(output_file)) {
     extension <- tolower(tools::file_ext(output_file))
     if (extension == "png") grDevices::png(output_file, width = width, height = height, units = "in", res = res)
@@ -168,17 +218,20 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
     else stop("output_file must end in .png, .tif, or .tiff.", call. = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
   }
-  row_gap <- min(.055, .52 / max(1, n - 1))
-  y <- seq(.79, .79 - row_gap * (n - 1), length.out = n)
+  y <- seq(.845, .845 - row_gap * (n - 1), length.out = n)
   summary_y <- min(y) - .09
-  heterogeneity_y <- c(summary_y - .075, summary_y - .115)
-  text <- function(x, y, label, ...) grid::grid.text(label, x = grid::unit(x, "npc"), y = grid::unit(y, "npc"), ...)
+  if (is.null(heterogeneity_y)) heterogeneity_y <- c(summary_y - .075, summary_y - .115)
+  text <- function(x, y, label, gp = grid::gpar(), ...) {
+    # ponytail: apply the common family here so no label can retain a different font.
+    gp$fontfamily <- font_family
+    grid::grid.text(label, x = grid::unit(x, "npc"), y = grid::unit(y, "npc"), gp = gp, ...)
+  }
   ci_label <- function(est, lwr, upr) sprintf("%.2f [%.2f; %.2f]", est, lwr, upr)
   format_heterogeneity <- function(x, label) {
     if (is.null(x)) return(NULL)
     p <- x$p
     p_label <- if (!is.finite(p)) "NA" else if (p < .001) "<0.001" else sprintf("%.3f", p)
-    sprintf("Heterogeneity for %s: tau2 = %.2f, Q = %.2f, p %s, I2 = %.1f%%", label, x$tau2, x$q, if (p_label == "<0.001") "< 0.001" else paste0("= ", p_label), 100 * x$i2)
+    sprintf("Heterogeneity for %s: \u03c4\u00b2 = %.2f, Q = %.2f, p %s, I\u00b2 = %.1f%%", label, x$tau2, x$q, if (p_label == "<0.001") "< 0.001" else paste0("= ", p_label), 100 * x$i2)
   }
   left <- .015
   widths <- .97 * column_widths / sum(column_widths)
@@ -189,32 +242,32 @@ plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", 
   grid::grid.newpage()
   headers <- c("Study", "TP", "FP", "FN", "TN", "Sensitivity", "Specificity", "Sensitivity", "Specificity")
   header_x <- c(starts[["study"]], centers[c("tp", "fp", "fn", "tn", "sens_text", "spec_text", "sens_plot", "spec_plot")])
-  for (i in seq_along(headers)) text(header_x[i], .91, headers[i], gp = grid::gpar(fontface = "bold", fontfamily = "serif", cex = .86), just = if (i == 1) "left" else "centre")
+  for (i in seq_along(headers)) text(header_x[i], .91, headers[i], gp = grid::gpar(fontface = "bold", fontfamily = "serif", cex = header_cex), just = if (i == 1) "left" else "centre")
   grid::grid.segments(x0 = grid::unit(.015, "npc"), x1 = grid::unit(.985, "npc"), y0 = grid::unit(.875, "npc"), y1 = grid::unit(.875, "npc"), gp = grid::gpar(lwd = 2.2))
   for (i in seq_len(n)) {
     row <- studies[i, ]
-    text(starts[["study"]], y[i], row$study, just = "left", gp = grid::gpar(cex = .72))
-    for (j in seq_along(c("TP", "FP", "FN", "TN"))) text(centers[[tolower(c("TP", "FP", "FN", "TN")[j])]], y[i], row[[c("TP", "FP", "FN", "TN")[j]]], gp = grid::gpar(cex = .72))
-    text(centers[["sens_text"]], y[i], ci_label(row$sens, row$sens_lwr, row$sens_upr), gp = grid::gpar(cex = .68))
-    text(centers[["spec_text"]], y[i], ci_label(row$spec, row$spec_lwr, row$spec_upr), gp = grid::gpar(cex = .68))
+    text(starts[["study"]], y[i], row$study, just = "left", gp = grid::gpar(cex = study_cex))
+    for (j in seq_along(c("TP", "FP", "FN", "TN"))) text(centers[[tolower(c("TP", "FP", "FN", "TN")[j])]], y[i], row[[c("TP", "FP", "FN", "TN")[j]]], gp = grid::gpar(cex = study_cex))
+    text(centers[["sens_text"]], y[i], ci_label(row$sens, row$sens_lwr, row$sens_upr), gp = grid::gpar(cex = ci_text_cex))
+    text(centers[["spec_text"]], y[i], ci_label(row$spec, row$spec_lwr, row$spec_upr), gp = grid::gpar(cex = ci_text_cex))
   }
-  text(starts[["study"]], summary_y, summary$study, just = "left", gp = grid::gpar(fontface = "bold", fontfamily = "serif", cex = .78))
-  for (j in seq_along(c("TP", "FP", "FN", "TN"))) text(centers[[tolower(c("TP", "FP", "FN", "TN")[j])]], summary_y, summary[[c("TP", "FP", "FN", "TN")[j]]], gp = grid::gpar(fontface = "bold", fontfamily = "serif", cex = .75))
-  text(centers[["sens_text"]], summary_y, ci_label(summary$sens, summary$sens_lwr, summary$sens_upr), gp = grid::gpar(fontface = "bold", cex = .7))
-  text(centers[["spec_text"]], summary_y, ci_label(summary$spec, summary$spec_lwr, summary$spec_upr), gp = grid::gpar(fontface = "bold", cex = .7))
+  text(starts[["study"]], summary_y, summary$study, just = "left", gp = grid::gpar(fontface = "bold", fontfamily = "serif", cex = summary_cex))
+  for (j in seq_along(c("TP", "FP", "FN", "TN"))) text(centers[[tolower(c("TP", "FP", "FN", "TN")[j])]], summary_y, summary[[c("TP", "FP", "FN", "TN")[j]]], gp = grid::gpar(fontface = "bold", fontfamily = "serif", cex = summary_count_cex))
+  text(centers[["sens_text"]], summary_y, ci_label(summary$sens, summary$sens_lwr, summary$sens_upr), gp = grid::gpar(fontface = "bold", cex = summary_ci_cex))
+  text(centers[["spec_text"]], summary_y, ci_label(summary$spec, summary$spec_lwr, summary$spec_upr), gp = grid::gpar(fontface = "bold", cex = summary_ci_cex))
   sens_region <- c(starts[["sens_plot"]] + .004, ends[["sens_plot"]] - .012)
   spec_region <- c(starts[["spec_plot"]] + .012, ends[["spec_plot"]] - .004)
-  .draw_forest_panel(studies$sens, studies$sens_lwr, studies$sens_upr, studies$TP + studies$FN, y, summary$sens, summary$sens_lwr, summary$sens_upr, summary_y, sens_region, range(sens_axis))
-  .draw_forest_panel(studies$spec, studies$spec_lwr, studies$spec_upr, studies$TN + studies$FP, y, summary$spec, summary$spec_lwr, summary$spec_upr, summary_y, spec_region, range(spec_axis))
+  .draw_forest_panel(studies$sens, studies$sens_lwr, studies$sens_upr, panel_weights[[1]], y, summary$sens, summary$sens_lwr, summary$sens_upr, summary_y, sens_region, range(sens_axis), square_col, square_max_mm, ci_col, ci_lwd, diamond_col)
+  .draw_forest_panel(studies$spec, studies$spec_lwr, studies$spec_upr, panel_weights[[2]], y, summary$spec, summary$spec_lwr, summary$spec_upr, summary_y, spec_region, range(spec_axis), square_col, square_max_mm, ci_col, ci_lwd, diamond_col)
   heterogeneity_label <- c(format_heterogeneity(heterogeneity$sensitivity, "sensitivity"), format_heterogeneity(heterogeneity$specificity, "specificity"))
-  if (!is.null(heterogeneity)) for (i in seq_along(heterogeneity_label)) if (!is.null(heterogeneity_label[i])) text(starts[["study"]], heterogeneity_y[i], heterogeneity_label[i], just = "left", gp = grid::gpar(fontfamily = "serif", cex = .66, col = "black"))
+  if (!is.null(heterogeneity)) for (i in seq_along(heterogeneity_label)) if (!is.null(heterogeneity_label[i])) text(heterogeneity_x, heterogeneity_y[i], heterogeneity_label[i], just = "left", gp = grid::gpar(fontfamily = "serif", cex = heterogeneity_cex, col = "black"))
   for (axis in list(list(ticks = sens_axis, region = sens_region), list(ticks = spec_axis, region = spec_region))) {
     x <- axis$region[1] + (axis$ticks - min(axis$ticks)) / diff(range(axis$ticks)) * diff(axis$region)
     axis_y <- summary_y - .05
     grid::grid.segments(x0 = grid::unit(axis$region[1], "npc"), x1 = grid::unit(axis$region[2], "npc"), y0 = grid::unit(axis_y, "npc"), y1 = grid::unit(axis_y, "npc"), gp = grid::gpar(lwd = 1.8))
     for (i in seq_along(x)) {
       grid::grid.segments(x0 = grid::unit(x[i], "npc"), x1 = grid::unit(x[i], "npc"), y0 = grid::unit(axis_y, "npc"), y1 = grid::unit(axis_y - .025, "npc"), gp = grid::gpar(lwd = 1.8))
-      text(x[i], axis_y - .055, formatC(axis$ticks[i], format = "f", digits = 1), gp = grid::gpar(fontfamily = "serif", cex = .68))
+      text(x[i], axis_y - .055, formatC(axis$ticks[i], format = "f", digits = 1), gp = grid::gpar(fontfamily = "serif", cex = axis_cex))
     }
   }
   invisible(output_file)
@@ -290,33 +343,47 @@ fit_bivariate_meta <- function(sensitivity_meta, specificity_meta, ...) {
 #' Plot an SROC curve with confidence and prediction contours.
 #'
 #' @return A ggplot object, invisibly saved to output_file when supplied.
-plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, output_file = NULL, width = 6, height = 5, dpi = 300, ...) {
-  if (identical(fit$backend, "mada")) {
+plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, output_file = NULL,
+  width = 6, height = 5, dpi = 300, ..., full_curve = FALSE,
+  show_legend = TRUE, digits = 2, custom_se = NULL, custom_sp = NULL, custom_auc = NULL,
+  legend_position = "bottomright", legend_text_size = 3.5, legend_bg = "#F8F9FA",
+  font_family = "sans", base_size = 14, title = "SROC with Prediction & Confidence Contours",
+  show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
+  summary_size = 4.5, summary_col = "#C0392B", sroc_col = "#2C3E50", sroc_linewidth = 1.2,
+  confidence_col = "#2980B9", confidence_alpha = .2,
+  prediction_col = "#BDC3C7", prediction_alpha = .15,
+  auc_digits = NULL, x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2)) {
+  if (length(list(...))) stop("Unknown plot_sroc arguments: ", paste(names(list(...)), collapse = ", "), call. = FALSE)
+  if (!is.logical(full_curve) || length(full_curve) != 1L || is.na(full_curve))
+    stop("full_curve must be TRUE or FALSE.", call. = FALSE)
+  if (full_curve && !identical(fit$model_type, "mada::reitsma ruttergatsonis SROC"))
+    stop("full_curve = TRUE currently supports the ruttergatsonis model only.", call. = FALSE)
+  is_qmd <- identical(fit$backend, "qmd") || !is.null(fit$plot_data$sroc_df)
+  if (is.null(auc_digits)) auc_digits <- if (is_qmd) digits else 3
+  if (is_qmd) {
+    adapted <- fit
+  } else {
     pd <- fit$plot_data
+    if (full_curve) {
+      fpr <- seq(0, 1, length.out = max(2001L, nrow(pd$sroc)))
+      curve <- mada::sroc(fit$model, type = "ruttergatsonis", return_function = TRUE)
+      pd$sroc <- data.frame(sp = 1 - fpr, se = curve(fpr))
+    }
+    # ponytail: share one renderer across backends so every style control works.
     adapted <- list(metrics = list(se = fit$metrics$sensitivity, sp = fit$metrics$specificity, auc = fit$metrics$auc),
       plot_data = list(conf_df = pd$confidence, pred_df = pd$prediction, sroc_df = pd$sroc,
-        study_df = data.frame(Study = pd$studies$Study, study_id = seq_len(nrow(pd$studies)), se = pd$studies$sensitivity, sp = pd$studies$specificity)))
-    # Preserve the requested QMD presentation, using only the standard-model results.
-    args <- utils::modifyList(list(model_obj = adapted, show_conf = show_confidence, show_pred = show_prediction,
-      custom_auc = sprintf("AUC: %.3f (full curve)", fit$metrics$auc[["est"]])), list(...))
-    p <- do.call(plot_metandi, args)
-    if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
-    return(p)
+        study_df = data.frame(Study = pd$studies$Study, study_id = seq_len(nrow(pd$studies)),
+          se = pd$studies$sensitivity, sp = pd$studies$specificity)))
   }
-  if (identical(fit$backend, "qmd") || !is.null(fit$plot_data$sroc_df)) {
-    p <- plot_metandi(fit, show_conf = show_confidence, show_pred = show_prediction, ...)
-    if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
-    return(p)
-  }
-  pd <- fit$plot_data; mt <- fit$metrics
-  p <- ggplot2::ggplot()
-  if (show_prediction) p <- p + ggplot2::geom_polygon(data = pd$prediction, ggplot2::aes(x = sp, y = se), fill = "grey70", alpha = .2) + ggplot2::geom_path(data = pd$prediction, ggplot2::aes(x = sp, y = se), linetype = "dotted", colour = "grey45")
-  if (show_confidence) p <- p + ggplot2::geom_polygon(data = pd$confidence, ggplot2::aes(x = sp, y = se), fill = "#2980B9", alpha = .18) + ggplot2::geom_path(data = pd$confidence, ggplot2::aes(x = sp, y = se), linetype = "dashed", colour = "#2980B9")
-  p <- p +
-    ggplot2::geom_line(data = pd$sroc, ggplot2::aes(x = sp, y = se), linewidth = 1.1, colour = "#2C3E50") +
-    ggplot2::geom_point(data = pd$studies, ggplot2::aes(x = specificity, y = sensitivity), shape = 21, fill = "white", colour = "#7F8C8D", size = 3) +
-    ggplot2::geom_point(ggplot2::aes(x = mt$specificity[["est"]], y = mt$sensitivity[["est"]]), shape = 15, size = 4, colour = "#C0392B") +
-    ggplot2::scale_x_reverse(limits = c(1, 0), breaks = seq(0, 1, .2)) + ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .2)) + ggplot2::coord_fixed() + ggplot2::labs(x = "Specificity", y = "Sensitivity", title = "SROC") + ggplot2::theme_classic()
+  p <- plot_metandi(adapted, digits = digits, show_conf = show_confidence, show_pred = show_prediction,
+    show_legend = show_legend, custom_se = custom_se, custom_sp = custom_sp, custom_auc = custom_auc,
+    legend_position = legend_position, legend_text_size = legend_text_size, legend_bg = legend_bg,
+    font_family = font_family, base_size = base_size, title = title,
+    show_study_labels = show_study_labels, study_size = study_size, study_label_size = study_label_size,
+    summary_size = summary_size, summary_col = summary_col, sroc_col = sroc_col, sroc_linewidth = sroc_linewidth,
+    confidence_col = confidence_col, confidence_alpha = confidence_alpha,
+    prediction_col = prediction_col, prediction_alpha = prediction_alpha,
+    auc_digits = auc_digits, x_breaks = x_breaks, y_breaks = y_breaks)
   if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
   p
 }

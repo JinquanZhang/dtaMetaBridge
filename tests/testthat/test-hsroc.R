@@ -17,4 +17,21 @@ testthat::test_that("default HSROC agrees with mada and variance-ratio algebra",
   trap <- sum(diff(x) * (head(y,-1) + tail(y,-1)) / 2)
   testthat::expect_equal(fit$metrics$auc[["est"]], trap, tolerance = 1e-5)
   testthat::expect_true(all(is.na(fit$metrics$auc[c("lwr", "upr")])))
+  original <- fit
+  observed <- plot_sroc(fit)
+  full <- plot_sroc(fit, full_curve = TRUE)
+  curve_data <- function(p) Filter(function(layer) inherits(layer$geom, "GeomLine"), p$layers)[[1]]$data
+  testthat::expect_equal(curve_data(observed), fit$plot_data$sroc)
+  expanded <- curve_data(full)
+  labels <- unlist(lapply(ggplot2::ggplot_build(full)$data, function(layer) layer$label))
+  testthat::expect_true(any(grepl("AUC:", labels, fixed = TRUE)))
+  testthat::expect_false(any(grepl("full curve", labels, fixed = TRUE)))
+  testthat::expect_equal(range(expanded$sp), c(0, 1))
+  testthat::expect_equal(expanded$se, analytic(1 - expanded$sp), tolerance = 1e-10)
+  testthat::expect_true(all(is.finite(expanded$se)))
+  testthat::expect_identical(fit, original)
+  testthat::expect_error(plot_sroc(fit, full_curve = NA), "full_curve")
+  unsupported <- fit
+  unsupported$model_type <- "mada::reitsma naive SROC"
+  testthat::expect_error(plot_sroc(unsupported, full_curve = TRUE), "ruttergatsonis")
 })

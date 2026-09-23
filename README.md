@@ -2,7 +2,7 @@
 
 `dtaMetaBridge` 用于衔接配对的 `meta::metaprop()` 对象与标准诊断试验准确性
 meta 分析，提供双森林图、Reitsma 双变量随机效应模型、Rutter–Gatsonis HSROC 曲线和检验后概率。
-0.4.0 默认调用 `mada::reitsma(method = "reml")` 与 `mada::sroc(type = "ruttergatsonis")`。
+1.0.0 默认调用 `mada::reitsma(method = "reml")` 与 `mada::sroc(type = "ruttergatsonis")`。
 
 ## 使用教程
 
@@ -12,6 +12,18 @@ meta 分析，提供双森林图、Reitsma 双变量随机效应模型、Rutter�
 install.packages("remotes")       # 只需安装一次
 remotes::install_github("JinquanZhang/dtaMetaBridge")
 library(dtaMetaBridge)
+```
+
+固定安装 v1.0.0：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.0.0")`。
+更新后请重启 R，再加载包。三个主要函数都有独立中文帮助页，包含用法、参数和示例：
+
+```r
+?plot_sensspec_forest_meta
+?plot_sroc
+?posttest_probability
+# 不加载包也可查询：
+help("plot_sroc", package = "dtaMetaBridge")
+packageVersion("dtaMetaBridge")
 ```
 
 ### 数据格式
@@ -48,6 +60,9 @@ plot_sensspec_forest_meta(meta_sens, meta_spec,
 # 3. Reitsma 双变量模型 + Rutter–Gatsonis HSROC（默认）。
 fit <- fit_bivariate_meta(meta_sens, meta_spec)
 plot_sroc(fit)
+
+# 绘制完整的 Rutter-Gatsonis 曲线（包括观察范围外的模型外推）
+plot_sroc(fit, full_curve = TRUE)
 
 # 显式指定方法也可以：
 # fit <- fit_bivariate_meta(meta_sens, meta_spec, sroc_type = "ruttergatsonis")
@@ -88,7 +103,11 @@ posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
 ### 异质性与列宽调整
 
 使用 `plot_sensspec_forest_meta()` 时，图底部会自动显示灵敏度和特异度各自的
-`I2`、`tau2`、Cochran Q 和 p 值。研究方块按相应的患病者或非患病者样本量缩放，
+`I2`、`tau2`、Cochran Q 和 p 值。研究方块面积在各面板内正比于对应 `meta` 对象的
+随机效应权重 `w.random`（特异度权重按研究名称对齐），不再按样本量缩放。
+GLMM 对象通常不提供该权重，此时明确警告并使用等大方块，不代表等权模型，也不会改动汇总结果。
+需要实际权重的森林图时可另行拟合 `method = "Inverse"` 的模型；这会改变模型及汇总结果，不能只为改变图形而混用权重。
+绘图顺序为灰色方块、完整 95% CI 横线、点估计短竖线，
 汇总菱形为红色。`column_widths` 是一个命名数值向量；数值是各列的相对宽度，可按
 版面需要调整。下例加宽研究名称和两张森林图区，并指定与示例图相同的坐标刻度：
 
@@ -108,6 +127,54 @@ plot_sensspec_forest_meta(
 
 ### 结果如何解释
 
+### 字号、行距与颜色
+
+以下新参数可直接传给 `plot_sensspec_forest_meta()`，均不改变统计结果：
+
+```r
+plot_sensspec_forest_meta(
+  meta_sens, meta_spec,
+  header_cex = 0.86,        # 表头
+  study_cex = 0.72,         # 研究名称和四格表计数
+  ci_text_cex = 0.68,       # 研究灵敏度/特异度及 CI 文字
+  summary_cex = 0.78,      # Total 标签
+  summary_count_cex = 0.75,# 汇总计数
+  summary_ci_cex = 0.70,   # 汇总灵敏度/特异度及 CI 文字
+  axis_cex = 0.68,         # 横轴刻度
+  row_gap = NULL,          # 自动行距；9 项研究可尝试 0.05 或 0.06
+  square_col = "grey70",   # 方块颜色
+  square_max_mm = 5,       # 最大方块边长（毫米）
+  ci_col = "black",        # CI 横线及点估计短竖线颜色
+  ci_lwd = 1.2,            # CI 横线及短竖线粗细
+  diamond_col = "#C00000"  # 汇总菱形颜色
+)
+```
+
+上面列出的是默认值。所有 `cex` 均为相对字号，不是 pt。
+`row_gap` 为图高比例，越大越疏；总研究行跨度不得超过图高的 0.52，
+研究较多时需减小行距。汇总行和坐标轴会随研究行移动；手动指定的
+`heterogeneity_y` 不会跟着移动，必要时改回 `NULL` 自动定位。
+加大字体或方块仍可能造成重叠，可增大导出 `height` 并检查成图。
+
+异质性文字可通过以下参数调整（不影响统计结果）：
+
+森林图所有文字默认统一使用 `font_family = "serif"`，包括表头、研究名称、
+数值、坐标刻度和异质性文字。可设为 `"sans"` 或 `"mono"`；其他字体需由
+当前绘图设备支持。字体统一不改变各处字号及粗体层级。
+
+```r
+plot_sensspec_forest_meta(
+  meta_sens, meta_spec,
+  heterogeneity_cex = 0.8,          # 相对字号；默认 0.66，不是 pt
+  font_family = "serif",           # 全图统一字体
+  heterogeneity_x = 0.02,           # 两行左端位置：0 为最左，1 为最右
+  heterogeneity_y = c(0.20, 0.15)   # 灵敏度、特异度；0 为底部，1 为顶部
+)
+```
+
+`heterogeneity_y = NULL`（默认）会自动将两行放在汇总行下方。
+手动位置不会自动避让其他元素；增大字体或移动文字后，请检查是否重叠或超出图边界。
+
 - 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。
 - SROC：默认 `sroc_type = "ruttergatsonis"`。以 REML 拟合 logit 灵敏度与 logit 假阳性率的双变量正态随机效应模型，按 HSROC 参数化生成曲线。默认连续性校正为 0.5，仅对含零单元格的研究实施。
 - 曲线默认只显示观察到的 FPR 范围；完整 AUC 对同一曲线在 FPR 0–1 上积分，包含范围外的模型外推。`pauc` 是观察范围内的未标准化面积。
@@ -117,6 +184,41 @@ plot_sensspec_forest_meta(
 - post-test probability：区间反映汇总平均准确性的抽样不确定性，不是未来任一新场景的预测区间。
 
 ## 主要函数
+
+### SROC 图形参数
+
+以下参数适用于 `plot_sroc()` 的各绘图分支；`full_curve = TRUE` 仍仅支持
+`ruttergatsonis`。不改变拟合模型、汇总数值或 AUC。
+
+```r
+plot_sroc(
+  fit, full_curve = TRUE,
+  show_confidence = TRUE, show_prediction = TRUE, show_legend = TRUE,
+  legend_position = "bottomright", # bottomleft / topright / topleft 或 c(.54, .03)
+  legend_text_size = 3.5, legend_bg = "#F8F9FA",
+  font_family = "sans", base_size = 14,
+  title = "SROC with Prediction & Confidence Contours", # NULL 隐藏标题
+  show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
+  summary_size = 4.5, summary_col = "#C0392B",
+  sroc_col = "#2C3E50", sroc_linewidth = 1.2,
+  confidence_col = "#2980B9", confidence_alpha = .2,
+  prediction_col = "#BDC3C7", prediction_alpha = .15,
+  digits = 2, auc_digits = 3,
+  custom_se = NULL, custom_sp = NULL, custom_auc = NULL,
+  x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2),
+  output_file = "sroc.png", width = 6, height = 6, dpi = 300
+)
+```
+
+`legend_position = c(x, y)` 指图例框左下角，按画面坐标定位：0 为最左/最底，
+1 为最右/最顶，与倒序的特异度轴无关。图例宽度固定为图宽的 0.44，
+高度随字号和内容行数调整；超出画面的设置会报错，长的自定义文本仍需检查是否溢出。
+图例为手工注释，不能用 `theme(legend.position=...)` 移动。
+`base_size` 单位是 pt，图例文字、点及编号大小是 mm；字体须被当前设备支持。
+`alpha` 范围为 0–1，0 完全透明。刻度参数不改变轴范围。
+`auc_digits = NULL` 时，QMD 沿用 `digits`，其他模型使用 3 位小数。
+`custom_auc = NULL` 自动生成文字；区间未估计时仅显示 AUC 点估计，不显示 NA。
+MIDAS 绘图现与其他分支共用渲染函数，也支持这些选项（其默认外观相应统一）。
 
 | 函数 | 用途 |
 | --- | --- |
