@@ -1,15 +1,15 @@
 # dtaMetaBridge
 
 `dtaMetaBridge` 用于衔接配对的 `meta::metaprop()` 对象与标准诊断试验准确性
-meta 分析，提供双森林图、二项似然 Reitsma 双变量模型、Rutter–Gatsonis HSROC 曲线和检验后概率。
+meta 分析，提供双森林图、直接频率学 Rutter–Gatsonis HSROC、贝叶斯双变量 SROC 和检验后概率。
 
 ## 使用教程
 
-### 四格表直接拟合五种 SROC 曲线
+### 四格表直接拟合 SROC 曲线
 
-`fit_sroc()` 默认用频率学二项似然双变量模型拟合四格表。
-五条曲线沿用 `meta4diag::SROC()` 的 1--5 公式编号；默认第 5 条是
-Rutter–Gatsonis 曲线。`backend = "bayes"` 可调用 INLA 贝叶斯双变量模型；
+`fit_sroc()` 默认直接用频率学 Rutter–Gatsonis HSROC 二项似然模型拟合四格表。
+`backend = "frequency"` 固定直接拟合第 5 类 Rutter–Gatsonis 曲线。
+`backend = "bayes"` 可调用 INLA 贝叶斯双变量模型，并选择 `meta4diag::SROC()` 的 1--5 种公式；
 须先安装 `INLA` 与 `meta4diag`。
 
 ```r
@@ -37,8 +37,8 @@ plot_sroc(fit_bayes, full_curve = TRUE)
 `frequency` 的 AUC 区间是研究层 Bootstrap 95% CI；`bayes` 的 AUC 区间是
 后验 95% CrI，两者不能按相同的频率学含义解读。
 
-类型编号：1 回归线1，2 主轴，3 Moses–Littenberg 型曲线，4 回归线2，5 Rutter–Gatsonis（默认）。
-这是曲线公式选择，不是五种模型拟合；同一数据的汇总点和区域保持一致。
+频率学后端固定使用原生 Rutter–Gatsonis 曲线（`sroc_type = 5`）。贝叶斯后端可选择：1 回归线1，2 主轴，3 Moses–Littenberg 型曲线，4 回归线2，5 Rutter–Gatsonis（默认）。
+贝叶斯后端中的类型编号是同一模型上的曲线公式选择，而不是五种模型拟合；同一数据的汇总点和区域保持一致。
 重复研究名只加显示编号，不合并数据；同一人群不同阈值不能当作独立研究。此时应采用
 `dtametaTMB::fitHoyer()` 或 `diagmeta` 等多阈值模型，保留阈值间的相关性。
 示例仅四行且相关系数接近边界，五条曲线可能几乎重合，不能据此判断公式无差别。
@@ -214,7 +214,7 @@ plot_sensspec_forest_meta(
 手动位置不会自动避让其他元素；增大字体或移动文字后，请检查是否重叠或超出图边界。
 
 - 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。
-- SROC：`fit_sroc()` 默认 `sroc_type = 5`，以二项似然双变量模型后按 HSROC 参数化生成曲线；零格由二项模型直接处理。
+- SROC：`fit_sroc()` 默认 `sroc_type = 5`，直接以 Rutter–Gatsonis 二项似然 HSROC 模型生成曲线；零格由二项模型直接处理。
 - 曲线默认只显示观察到的 FPR 范围；完整 AUC 对同一曲线在 FPR 0–1 上积分，包含范围外的模型外推。`pauc` 是观察范围内的未标准化面积。
 - `fit_sroc(..., auc_boot = 2000)` 可给 AUC 研究层 Bootstrap 95% CI；图中置信轮廓针对联合汇总点，不是整条 SROC 的置信带。
 - `qmd`、`midas`、`naive` 仅为显式可选方法；不是本文默认方法。
@@ -226,7 +226,7 @@ plot_sensspec_forest_meta(
 ### SROC 图形参数
 
 以下参数适用于 `plot_sroc()` 的各绘图分支；`full_curve = TRUE` 支持由 `fit_sroc()`
-生成的五种公式以及旧的 `ruttergatsonis` 模型，不改变拟合模型、汇总数值或 AUC。
+生成的完整模型曲线，不改变拟合模型、汇总数值或 AUC。
 
 ```r
 plot_sroc(
@@ -267,25 +267,25 @@ MIDAS 绘图现与其他分支共用渲染函数，也支持这些选项（其�
 
 ## 方法与论文引用
 
-推荐方法为 Reitsma 双变量模型及 Rutter–Gatsonis HSROC 参数化。实际估计使用
-`mada` 的 logit 正态近似与 REML；不是直接拟合原始 Rutter–Gatsonis 论文的 Bayesian 模型。
-Harbord 的参数映射适用于此处无协变量模型；这不代表不同似然与估计软件会得到相同数值。
+频率学默认方法为直接的 Rutter–Gatsonis HSROC 二项似然模型，使用
+`dtametaTMB::fitRutterGatsonis()` 估计；曲线严格按其 \(\Lambda\)、\(\beta\) 参数计算。
+贝叶斯方法使用 `meta4diag`；两类模型的区间含义与计算实现不同，数值不应强制完全一致。
 少研究、稀疏数据或方差边界时应检查模型稳定性。
 
 ### 可用于论文的方法描述
 
-采用 Reitsma 双变量随机效应模型联合汇总灵敏度与特异度，使用 R 包 mada 以限制性最大似然法估计。
-根据无协变量双变量模型与 HSROC 的参数对应关系，以 Rutter–Gatsonis 参数化绘制 SROC 曲线。
-含零单元格的研究使用 0.5 连续性校正；报告联合汇总点的 95% 置信区域和近似 95% 预测区域。
+采用 Rutter–Gatsonis 层级回归模型联合汇总灵敏度与特异度，基于原始四格表的二项似然以频率学方法估计。
+根据模型原生参数 \(\Lambda\) 和 \(\beta\)，以 `logit(Se)=Λ exp(-β/2)-exp(-β) logit(Sp)` 绘制 SROC 曲线。
+报告联合汇总点的 95% 置信区域和近似 95% 预测区域。
 AUC 通过对拟合 SROC 曲线在假阳性率 0–1 范围内数值积分计算。
 
 ### 参考文献
 
-1. Reitsma JB, et al. Bivariate analysis of sensitivity and specificity produces informative summary measures in diagnostic reviews. *J Clin Epidemiol*. 2005;58:982–990. [doi:10.1016/j.jclinepi.2005.02.022](https://doi.org/10.1016/j.jclinepi.2005.02.022)
-2. Rutter CM, Gatsonis CA. A hierarchical regression approach to meta-analysis of diagnostic test accuracy evaluations. *Stat Med*. 2001;20:2865–2884. [doi:10.1002/sim.942](https://doi.org/10.1002/sim.942)
+1. Rutter CM, Gatsonis CA. A hierarchical regression approach to meta-analysis of diagnostic test accuracy evaluations. *Stat Med*. 2001;20:2865–2884. [doi:10.1002/sim.942](https://doi.org/10.1002/sim.942)
+2. Reitsma JB, et al. Bivariate analysis of sensitivity and specificity produces informative summary measures in diagnostic reviews. *J Clin Epidemiol*. 2005;58:982–990. [doi:10.1016/j.jclinepi.2005.02.022](https://doi.org/10.1016/j.jclinepi.2005.02.022)
 3. Harbord RM, et al. A unification of models for meta-analysis of diagnostic accuracy studies. *Biostatistics*. 2007;8:239–251. [doi:10.1093/biostatistics/kxl004](https://doi.org/10.1093/biostatistics/kxl004)
 
-软件实现见 [mada 文档](https://search.r-project.org/CRAN/refmans/mada/help/reitsma-class.html)。
-R 中可运行 `citation("dtaMetaBridge")` 查看方法文献，`citation("mada")` 查看软件引用。
+软件实现见 [dtametaTMB 文档](https://rdrr.io/cran/dtametaTMB/man/fitRutterGatsonis.html)。
+R 中可运行 `citation("dtaMetaBridge")` 查看方法文献。
 
 本包不能替代研究方案、原始四格表核验或偏倚风险评价。

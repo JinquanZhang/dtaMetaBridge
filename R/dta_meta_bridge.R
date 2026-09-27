@@ -364,8 +364,10 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
   pd <- fit$plot_data
   if (full_curve) {
     fpr <- seq(0, 1, length.out = max(2001L, nrow(pd$sroc)))
-    pd$sroc <- data.frame(sp = 1 - fpr, se = .sroc_values(fpr,
-      fit$curve_parameters$mu, fit$curve_parameters$slope))
+    se <- if (!is.null(fit$curve_parameters$Lambda))
+      .ruttergatsonis_values(fpr, fit$curve_parameters$Lambda, fit$curve_parameters$beta)
+    else .sroc_values(fpr, fit$curve_parameters$mu, fit$curve_parameters$slope)
+    pd$sroc <- data.frame(sp = 1 - fpr, se = se)
   }
   # ponytail: share one renderer across the two supported fit_sroc backends.
   adapted <- list(metrics = list(se = fit$metrics$sensitivity, sp = fit$metrics$specificity, auc = fit$metrics$auc),
@@ -395,7 +397,7 @@ posttest_probability <- function(fit, prevalence = .3, n_sims = 3000, seed = 202
   if (!identical(fit$backend, "frequency") && !identical(fit$backend, "bayes"))
     stop("fit must be returned by fit_sroc().", call. = FALSE)
   if (identical(fit$backend, "frequency")) {
-    par <- .dtameta_parameters(fit$model)
+    par <- .ruttergatsonis_parameters(fit$model)
     beta <- par$mu
     vcov_beta <- par$fixed
   } else {

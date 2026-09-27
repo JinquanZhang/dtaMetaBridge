@@ -1,4 +1,10 @@
-# dtaMetaBridge 1.0.0
+# dtaMetaBridge 1.5.0
+
+- `backend = "frequency"` 改为直接拟合 `dtametaTMB::fitRutterGatsonis()`；SROC 与 AUC 直接使用 Rutter--Gatsonis 的 \(\Lambda\) 与 \(\beta\) 参数，不再由 Reitsma 拟合结果转换。
+- 频率学后端仅支持原生的 Rutter--Gatsonis 曲线（`sroc_type = 5`）；贝叶斯后端仍可选择 1--5 种曲线公式。
+- 灵敏度、特异度和检验后概率的频率学不确定性由同一直接模型的参数协方差经 Delta 法计算。
+
+# dtaMetaBridge 1.4.0
 
 - 双森林图支持统一字体、表头与研究行字号、行距、列宽、独立横轴、颜色，以及异质性文字大小和位置。
 - 灰色方块面积按各面板的 meta 随机效应权重缩放；缺失权重时警告并使用等大方块。完整 CI 画在方块上层，点估计用短竖线标记。

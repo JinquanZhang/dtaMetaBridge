@@ -23,35 +23,48 @@
 }
 
 #' Fit a bivariate model and select one of five SROC formulas.
-.dtameta_fit <- function(data, study_col, conf_level) {
+.ruttergatsonis_fit <- function(data, study_col, conf_level) {
   if (!requireNamespace("dtametaTMB", quietly = TRUE))
-    stop("backend = 'dtametaTMB' requires the dtametaTMB package.", call. = FALSE)
+    stop("backend = 'frequency' requires the dtametaTMB package.", call. = FALSE)
   data$study <- data[[study_col]]
-  dtametaTMB::fitReitsma(data = data, TP = TP, FP = FP, FN = FN, TN = TN,
+  dtametaTMB::fitRutterGatsonis(data = data, TP = TP, FP = FP, FN = FN, TN = TN,
     study = study, conflevel = conf_level)
 }
 
-.dtameta_parameters <- function(model) {
-  e <- model$estimates
-  mu <- c(unname(e["mu_A.sens", "Estimate"]), -unname(e["mu_B.spec", "Estimate"]))
-  psi <- matrix(c(e["sigma2_A.sens", "Estimate"], -e["sigma_AB", "Estimate"],
-                  -e["sigma_AB", "Estimate"], e["sigma2_B.spec", "Estimate"]), 2, 2)
-  fixed <- as.matrix(model$vcov)[1:2, 1:2, drop = FALSE]
-  fixed[2, ] <- -fixed[2, ]; fixed[, 2] <- -fixed[, 2]
-  list(mu = mu, psi = psi, fixed = fixed)
+.ruttergatsonis_parameters <- function(model) {
+  p <- model$fit$par
+  L <- unname(p["Lambda"]); theta <- unname(p["Theta"]); beta <- unname(p["beta"])
+  if (any(!is.finite(c(L, theta, beta))))
+    stop("Rutter-Gatsonis model did not return finite fixed effects.", call. = FALSE)
+  b <- exp(beta / 2)
+  # Rutter-Gatsonis (2001): logit(Se) = Lambda exp(-beta/2) - exp(-beta) logit(Sp).
+  mu <- c((theta + .5 * L) / b, b * (theta - .5 * L))
+  value <- model$sdreport$value
+  sa <- unname(value["sigma2_alpha"]); st <- unname(value["sigma2_theta"])
+  psi <- matrix(c((st + .25 * sa) / b^2, st - .25 * sa,
+                  st - .25 * sa, b^2 * (st + .25 * sa)), 2, 2)
+  v <- as.matrix(model$sdreport$cov.fixed)[c("Lambda", "Theta", "beta"), c("Lambda", "Theta", "beta"), drop = FALSE]
+  jacobian <- rbind(c(.5 / b, 1 / b, -.5 * mu[1]),
+                    c(-.5 * b, b, .5 * mu[2]))
+  list(mu = mu, psi = psi, fixed = jacobian %*% v %*% t(jacobian),
+    Lambda = L, beta = beta)
 }
 
-.fit_sroc_dtameta <- function(data, study_col, sroc_type, conf_level, n_grid,
+.ruttergatsonis_values <- function(fpr, Lambda, beta) {
+  stats::plogis(Lambda * exp(-beta / 2) + exp(-beta) * stats::qlogis(fpr))
+}
+
+.fit_sroc_ruttergatsonis <- function(data, study_col, conf_level, n_grid,
   auc_boot, seed) {
-  model <- .dtameta_fit(data, study_col, conf_level)
-  par <- .dtameta_parameters(model)
-  slope <- .sroc_slope(par$psi, sroc_type)
+  model <- .ruttergatsonis_fit(data, study_col, conf_level)
+  par <- .ruttergatsonis_parameters(model)
+  slope <- exp(-par$beta)
   rho <- par$psi[1, 2] / sqrt(par$psi[1, 1] * par$psi[2, 2])
   if (abs(rho) > .999)
     warning("Between-study correlation is near its boundary; SROC formulas may coincide and estimates may be unstable.", call. = FALSE)
   if (slope <= 0)
     warning("Selected formula is flat or decreasing versus FPR; AUC is omitted. Consider type 5 and inspect model suitability.", call. = FALSE)
-  curve <- function(x) .sroc_values(x, par$mu, slope)
+  curve <- function(x) .ruttergatsonis_values(x, par$Lambda, par$beta)
   fpr <- data$FP / (data$FP + data$TN)
   auc <- if (slope > 0) stats::integrate(curve, 0, 1, rel.tol = 1e-8)$value else NA_real_
   auc_ci <- c(lwr = NA_real_, upr = NA_real_)
@@ -67,10 +80,9 @@
       d <- data[sample.int(nrow(data), nrow(data), replace = TRUE), , drop = FALSE]
       d[[study_col]] <- make.unique(as.character(d[[study_col]]), sep = " #")
       tryCatch({
-        p <- .dtameta_parameters(.dtameta_fit(d, study_col, conf_level))
-        b <- .sroc_slope(p$psi, sroc_type)
-        if (b <= 0) return(NA_real_)
-        stats::integrate(function(x) .sroc_values(x, p$mu, b), 0, 1, rel.tol = 1e-7)$value
+        p <- .ruttergatsonis_parameters(.ruttergatsonis_fit(d, study_col, conf_level))
+        stats::integrate(function(x) .ruttergatsonis_values(x, p$Lambda, p$beta),
+          0, 1, rel.tol = 1e-7)$value
       }, error = function(e) NA_real_)
     }, numeric(1))
     boot_auc <- boot_auc[is.finite(boot_auc)]
@@ -90,8 +102,9 @@
     data.frame(sp = 1 - stats::plogis(e[, 2]), se = stats::plogis(e[, 1]))
   }
   grid <- seq(max(.001, min(fpr)), min(.999, max(fpr)), length.out = n_grid)
-  list(model = model, backend = "frequency", model_type = "dtametaTMB::fitReitsma",
-    sroc_type = sroc_type, curve_parameters = list(mu = par$mu, slope = slope),
+  list(model = model, backend = "frequency", model_type = "dtametaTMB::fitRutterGatsonis",
+    sroc_type = 5L, curve_parameters = list(mu = par$mu, slope = slope,
+      Lambda = par$Lambda, beta = par$beta),
     input_data = data, interval_type = "95% CI",
     metrics = list(sensitivity = sens, specificity = spec,
       auc = c(est = auc, lwr = unname(auc_ci[1]), upr = unname(auc_ci[2])),
@@ -195,7 +208,9 @@ fit_sroc <- function(data, backend = c("frequency", "bayes"),
   d <- data
   d[[study_col]] <- make.unique(labels, sep = " #")
   if (backend == "frequency") {
-    out <- .fit_sroc_dtameta(d, study_col, as.integer(sroc_type), conf_level,
+    if (sroc_type != 5L)
+      stop("backend = 'frequency' directly fits Rutter-Gatsonis HSROC and therefore requires sroc_type = 5.", call. = FALSE)
+    out <- .fit_sroc_ruttergatsonis(d, study_col, conf_level,
       n_grid, as.integer(auc_boot), seed)
     out$input_data <- data
     return(out)

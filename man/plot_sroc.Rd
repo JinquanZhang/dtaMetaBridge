@@ -27,7 +27,7 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
 \item{width,height}{保存宽度、高度，英寸。}
 \item{dpi}{保存分辨率。}
 \item{...}{保留位置；未识别的额外参数会报错。其后的参数须使用名称传入。}
-\item{full_curve}{TRUE 绘制 FPR 0--1 的完整曲线；支持 fit_sroc 的五种公式以及旧接口的 ruttergatsonis。FALSE 使用已存曲线，默认限制在观察范围。}
+\item{full_curve}{TRUE 绘制 FPR 0--1 的完整模型曲线；FALSE 使用已存曲线，默认限制在观察范围。}
 \item{show_legend}{是否显示图内注释式图例。}
 \item{digits}{灵敏度、特异度的小数位数，0--10 的整数。}
 \item{custom_se,custom_sp,custom_auc}{自定义图例显示文字；NULL 使用计算值，不修改模型。}
@@ -53,7 +53,7 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
 }
 \details{
 横轴为特异度，由 1 递减到 0；纵轴为灵敏度。
-默认拟合方法为 Reitsma 双变量 REML 加 Rutter--Gatsonis 曲线。
+默认拟合方法为直接的频率学 Rutter--Gatsonis HSROC。
 full_curve 只改变绘图，不改变汇总估计、AUC 或区域；观察范围外属于模型外推。
 标准方法的 AUC 为完整曲线积分，未估计 AUC 置信区间。
 图例宽度固定，高度随字号变化；框超出面板时报错，过长文字仍可能溢出。
