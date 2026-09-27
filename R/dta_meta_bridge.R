@@ -356,17 +356,21 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
   if (length(list(...))) stop("Unknown plot_sroc arguments: ", paste(names(list(...)), collapse = ", "), call. = FALSE)
   if (!is.logical(full_curve) || length(full_curve) != 1L || is.na(full_curve))
     stop("full_curve must be TRUE or FALSE.", call. = FALSE)
-  if (full_curve && !identical(fit$model_type, "mada::reitsma ruttergatsonis SROC"))
+  if (full_curve && is.null(fit$curve_parameters) && !identical(fit$model_type, "mada::reitsma ruttergatsonis SROC"))
     stop("full_curve = TRUE currently supports the ruttergatsonis model only.", call. = FALSE)
   is_qmd <- identical(fit$backend, "qmd") || !is.null(fit$plot_data$sroc_df)
   if (is.null(auc_digits)) auc_digits <- if (is_qmd) digits else 3
+  if (!is.null(fit$curve_parameters) && fit$curve_parameters$slope <= 0 && is.null(custom_auc))
+    custom_auc <- "AUC unavailable (non-increasing curve)"
   if (is_qmd) {
     adapted <- fit
   } else {
     pd <- fit$plot_data
     if (full_curve) {
       fpr <- seq(0, 1, length.out = max(2001L, nrow(pd$sroc)))
-      curve <- mada::sroc(fit$model, type = "ruttergatsonis", return_function = TRUE)
+      curve <- if (!is.null(fit$curve_parameters)) function(x)
+        .sroc_values(x, fit$curve_parameters$mu, fit$curve_parameters$slope) else
+        mada::sroc(fit$model, type = "ruttergatsonis", return_function = TRUE)
       pd$sroc <- data.frame(sp = 1 - fpr, se = curve(fpr))
     }
     # ponytail: share one renderer across backends so every style control works.

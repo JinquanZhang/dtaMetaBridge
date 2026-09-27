@@ -27,7 +27,7 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
 \item{width,height}{保存宽度、高度，英寸。}
 \item{dpi}{保存分辨率。}
 \item{...}{保留位置；未识别的额外参数会报错。其后的参数须使用名称传入。}
-\item{full_curve}{TRUE 绘制 FPR 0--1 的完整曲线；仅支持 ruttergatsonis。FALSE 使用已存曲线，默认限制在观察范围。}
+\item{full_curve}{TRUE 绘制 FPR 0--1 的完整曲线；支持 fit_sroc 的五种公式以及旧接口的 ruttergatsonis。FALSE 使用已存曲线，默认限制在观察范围。}
 \item{show_legend}{是否显示图内注释式图例。}
 \item{digits}{灵敏度、特异度的小数位数，0--10 的整数。}
 \item{custom_se,custom_sp,custom_auc}{自定义图例显示文字；NULL 使用计算值，不修改模型。}
