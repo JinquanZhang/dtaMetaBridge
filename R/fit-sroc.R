@@ -183,7 +183,7 @@
 
 fit_sroc <- function(data, backend = c("frequency", "bayes"),
   sroc_type = 5L, study_col = "study", year_col = "Year",
-  conf_level = .95, n_grid = 1000, auc_boot = 0L, posterior_samples = 2000L, seed = 2026) {
+  conf_level = .95, n_grid = 1000, auc_boot = 2000L, posterior_samples = 2000L, seed = 2026) {
   if (!is.data.frame(data)) stop("data must be a data.frame.", call. = FALSE)
   if (!is.numeric(sroc_type) || length(sroc_type) != 1L || is.na(sroc_type) ||
       !sroc_type %in% 1:5) stop("sroc_type must be an integer from 1 to 5.", call. = FALSE)

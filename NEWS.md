@@ -1,3 +1,7 @@
+# dtaMetaBridge 1.5.1
+
+- 频率学 `fit_sroc()` 现在默认执行 2,000 次研究层 Bootstrap，并返回 Rutter--Gatsonis 曲线 AUC 的 95% CI；需要快速预览时可设 `auc_boot = 0`。
+
 # dtaMetaBridge 1.5.0
 
 - `backend = "frequency"` 改为直接拟合 `dtametaTMB::fitRutterGatsonis()`；SROC 与 AUC 直接使用 Rutter--Gatsonis 的 \(\Lambda\) 与 \(\beta\) 参数，不再由 Reitsma 拟合结果转换。

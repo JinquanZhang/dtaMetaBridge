@@ -1,6 +1,6 @@
 Package: dtaMetaBridge
 Title: Diagnostic Test Accuracy Meta-Analysis That Bridges 'meta' and HSROC Models
-Version: 1.5.0
+Version: 1.5.1
 Authors@R: person(given = "Jinquan", family = "Zhang", role = c("aut", "cre"), email = "jinquan_zhang_0607@163.com")
 Author: Jinquan Zhang [aut, cre]
 Maintainer: Jinquan Zhang <jinquan_zhang_0607@163.com>
