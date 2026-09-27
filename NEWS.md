@@ -1,3 +1,7 @@
+# dtaMetaBridge 1.5.2
+
+- `fit_sroc()` 新增 `n_cores`（默认 6），以 R 标准库 `parallel` 并行执行频率学 AUC Bootstrap，并使用独立随机数流保证可复现；自动不超过可用物理核心数。
+
 # dtaMetaBridge 1.5.1
 
 - 频率学 `fit_sroc()` 现在默认执行 2,000 次研究层 Bootstrap，并返回 Rutter--Gatsonis 曲线 AUC 的 95% CI；需要快速预览时可设 `auc_boot = 0`。

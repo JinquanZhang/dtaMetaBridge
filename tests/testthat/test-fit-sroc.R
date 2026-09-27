@@ -37,6 +37,7 @@ test_that("direct Rutter-Gatsonis fit retains rows, zero cells and original coun
   }
   expect_error(fit_sroc(d, backend="frequency", sroc_type=1), "requires sroc_type = 5")
   expect_error(fit_sroc(d, backend="frequency", sroc_type=6), "1 to 5")
+  expect_error(fit_sroc(d, n_cores=0), "n_cores")
   expect_error(fit_sroc(d, n_grid=NA_real_), "n_grid")
   expect_error(fit_sroc(d, conf_level=1), "conf_level")
 })

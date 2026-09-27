@@ -55,7 +55,7 @@
 }
 
 .fit_sroc_ruttergatsonis <- function(data, study_col, conf_level, n_grid,
-  auc_boot, seed) {
+  auc_boot, n_cores, seed) {
   model <- .ruttergatsonis_fit(data, study_col, conf_level)
   par <- .ruttergatsonis_parameters(model)
   slope <- exp(-par$beta)
@@ -75,8 +75,7 @@
     on.exit(if (had_seed) assign(".Random.seed", old_seed, envir = .GlobalEnv)
       else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
         rm(".Random.seed", envir = .GlobalEnv), add = TRUE)
-    set.seed(seed)
-    boot_auc <- vapply(seq_len(auc_boot), function(i) {
+    boot_one <- function(i) {
       d <- data[sample.int(nrow(data), nrow(data), replace = TRUE), , drop = FALSE]
       d[[study_col]] <- make.unique(as.character(d[[study_col]]), sep = " #")
       tryCatch({
@@ -84,7 +83,22 @@
         stats::integrate(function(x) .ruttergatsonis_values(x, p$Lambda, p$beta),
           0, 1, rel.tol = 1e-7)$value
       }, error = function(e) NA_real_)
-    }, numeric(1))
+    }
+    available_cores <- suppressWarnings(parallel::detectCores(logical = FALSE))
+    available_cores <- if (is.finite(available_cores)) available_cores else 1L
+    workers <- min(as.integer(n_cores), as.integer(auc_boot), as.integer(available_cores))
+    if (workers > 1L) {
+      cl <- parallel::makeCluster(workers)
+      on.exit(parallel::stopCluster(cl), add = TRUE)
+      parallel::clusterEvalQ(cl, library(dtametaTMB))
+      parallel::clusterExport(cl, c(".ruttergatsonis_fit", ".ruttergatsonis_parameters",
+        ".ruttergatsonis_values"), envir = environment())
+      parallel::clusterSetRNGStream(cl, iseed = seed)
+      boot_auc <- unlist(parallel::parLapply(cl, seq_len(auc_boot), boot_one), use.names = FALSE)
+    } else {
+      set.seed(seed)
+      boot_auc <- vapply(seq_len(auc_boot), boot_one, numeric(1))
+    }
     boot_auc <- boot_auc[is.finite(boot_auc)]
     if (length(boot_auc) < max(20L, auc_boot * .75))
       warning("Too many Bootstrap refits failed; AUC interval is unavailable.", call. = FALSE)
@@ -183,7 +197,8 @@
 
 fit_sroc <- function(data, backend = c("frequency", "bayes"),
   sroc_type = 5L, study_col = "study", year_col = "Year",
-  conf_level = .95, n_grid = 1000, auc_boot = 2000L, posterior_samples = 2000L, seed = 2026) {
+  conf_level = .95, n_grid = 1000, auc_boot = 2000L, n_cores = 6L,
+  posterior_samples = 2000L, seed = 2026) {
   if (!is.data.frame(data)) stop("data must be a data.frame.", call. = FALSE)
   if (!is.numeric(sroc_type) || length(sroc_type) != 1L || is.na(sroc_type) ||
       !sroc_type %in% 1:5) stop("sroc_type must be an integer from 1 to 5.", call. = FALSE)
@@ -194,6 +209,8 @@ fit_sroc <- function(data, backend = c("frequency", "bayes"),
     stop("conf_level must be strictly between 0 and 1.", call. = FALSE)
   if (!is.numeric(auc_boot) || length(auc_boot) != 1L || auc_boot < 0 || auc_boot != floor(auc_boot))
     stop("auc_boot must be a non-negative integer.", call. = FALSE)
+  if (!is.numeric(n_cores) || length(n_cores) != 1L || !is.finite(n_cores) || n_cores < 1 || n_cores != floor(n_cores))
+    stop("n_cores must be a positive integer.", call. = FALSE)
   if (!is.numeric(posterior_samples) || length(posterior_samples) != 1L || posterior_samples < 20 || posterior_samples != floor(posterior_samples))
     stop("posterior_samples must be an integer >= 20.", call. = FALSE)
   if (!is.character(study_col) || length(study_col) != 1L || is.na(study_col))
@@ -211,7 +228,7 @@ fit_sroc <- function(data, backend = c("frequency", "bayes"),
     if (sroc_type != 5L)
       stop("backend = 'frequency' directly fits Rutter-Gatsonis HSROC and therefore requires sroc_type = 5.", call. = FALSE)
     out <- .fit_sroc_ruttergatsonis(d, study_col, conf_level,
-      n_grid, as.integer(auc_boot), seed)
+      n_grid, as.integer(auc_boot), as.integer(n_cores), seed)
     out$input_data <- data
     return(out)
   }

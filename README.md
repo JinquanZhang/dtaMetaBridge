@@ -19,7 +19,7 @@ df_dat <- data.frame(
   TP = c(52, 15, 20, 10), FP = c(1, 4, 1, 0),
   FN = c(19, 5, 4, 14), TN = c(16, 29, 19, 20)
 )
-fit <- fit_sroc(df_dat, sroc_type = 5, auc_boot = 2000)
+fit <- fit_sroc(df_dat, sroc_type = 5, auc_boot = 2000, n_cores = 6)
 plot_sroc(fit, full_curve = TRUE)
 ?fit_sroc
 ```
@@ -36,6 +36,7 @@ plot_sroc(fit_bayes, full_curve = TRUE)
 
 `frequency` 默认以 2,000 次研究层 Bootstrap 计算 AUC 95% CI；`bayes` 的 AUC 区间是
 后验 95% CrI，两者不能按相同的频率学含义解读。
+`n_cores = 6` 是频率学 Bootstrap 的默认并行核心数；会自动不超过本机物理核心数。Windows 同样可用。
 
 频率学后端固定使用原生 Rutter–Gatsonis 曲线（`sroc_type = 5`）。贝叶斯后端可选择：1 回归线1，2 主轴，3 Moses–Littenberg 型曲线，4 回归线2，5 Rutter–Gatsonis（默认）。
 贝叶斯后端中的类型编号是同一模型上的曲线公式选择，而不是五种模型拟合；同一数据的汇总点和区域保持一致。
@@ -216,7 +217,7 @@ plot_sensspec_forest_meta(
 - 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。
 - SROC：`fit_sroc()` 默认 `sroc_type = 5`，直接以 Rutter–Gatsonis 二项似然 HSROC 模型生成曲线；零格由二项模型直接处理。
 - 曲线默认只显示观察到的 FPR 范围；完整 AUC 对同一曲线在 FPR 0–1 上积分，包含范围外的模型外推。`pauc` 是观察范围内的未标准化面积。
-- `fit_sroc()` 默认以 `auc_boot = 2000` 给出 AUC 研究层 Bootstrap 95% CI；快速预览可设 `auc_boot = 0`。图中置信轮廓针对联合汇总点，不是整条 SROC 的置信带。
+- `fit_sroc()` 默认以 `auc_boot = 2000, n_cores = 6` 并行给出 AUC 研究层 Bootstrap 95% CI；快速预览可设 `auc_boot = 0`。图中置信轮廓针对联合汇总点，不是整条 SROC 的置信带。
 - `qmd`、`midas`、`naive` 仅为显式可选方法；不是本文默认方法。
 - `fit$metrics$auc`：跨研究的 SROC 区分能力汇总，不能替代单项研究中连续评分的 ROC AUC。
 - post-test probability：区间反映汇总平均准确性的抽样不确定性，不是未来任一新场景的预测区间。

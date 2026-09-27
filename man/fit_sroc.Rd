@@ -6,7 +6,7 @@
 \usage{
 fit_sroc(data, backend = c("frequency", "bayes"),
   sroc_type = 5L, study_col = "study", year_col = "Year",
-  conf_level = 0.95, n_grid = 1000, auc_boot = 2000L,
+  conf_level = 0.95, n_grid = 1000, auc_boot = 2000L, n_cores = 6L,
   posterior_samples = 2000L, seed = 2026)
 }
 \arguments{
@@ -18,6 +18,7 @@ fit_sroc(data, backend = c("frequency", "bayes"),
 \item{conf_level}{灵敏度、特异度与轮廓的区间水平，默认 0.95。}
 \item{n_grid}{观察到的 FPR 范围内曲线点数；为不小于 100 的整数。}
 \item{auc_boot}{AUC 的研究层非参数 Bootstrap 次数，默认 2000，并返回百分位 Bootstrap 95\% CI。设为 0 只返回 AUC 点估计，适用于快速预览。}
+\item{n_cores}{仅 \code{backend = "frequency"} 且 \code{auc_boot > 0} 使用：Bootstrap 并行工作进程数，默认 6。自动不超过可用物理核心数；设为 1 使用串行计算。}
 \item{posterior_samples}{仅 \code{backend = "bayes"} 使用：用于非线性指标与 AUC 后验可信区间的抽样次数，默认 2000，至少为 20。}
 \item{seed}{\code{auc_boot > 0} 时的随机种子；函数会恢复调用前的随机数状态。}
 }
