@@ -1,17 +1,17 @@
 \name{plot_sensspec_forest_meta}
 \encoding{UTF-8}
 \alias{plot_sensspec_forest_meta}
-\title{从 meta 对象绘制灵敏度与特异度双森林图}
+\title{从 meta 对象或四格表绘制灵敏度与特异度双森林图}
 \description{研究行、四格表、区间、汇总菱形和异质性信息并排显示；通过 \code{...} 调整布局。}
 \usage{
-plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...,
+plot_sensspec_forest_meta(sensitivity_meta, specificity_meta = NULL, ...,
   use_meta_summary = TRUE)
 }
 \arguments{
-\item{sensitivity_meta}{灵敏度的 \code{meta::metaprop} 对象，event/n 为 TP/(TP+FN)。}
-\item{specificity_meta}{特异度的配对对象，event/n 为 TN/(TN+FP)，按研究名对齐。}
+\item{sensitivity_meta}{灵敏度的 \code{meta::metaprop} 对象，event/n 为 TP/(TP+FN)；也可直接传入含 study、TP、FP、FN、TN 的四格表数据框。}
+\item{specificity_meta}{使用 meta 对象时传入特异度的配对对象，event/n 为 TN/(TN+FP)，按研究名对齐；四格表输入时必须为 NULL。}
 \item{use_meta_summary}{默认 TRUE，菱形采用 meta 对象的随机效应汇总值；FALSE 使用合并四格表的粗比例，不是双变量模型汇总值。}
-\item{...}{传给 \code{plot_sensspec_forest} 的绘图参数，完整列表见下节。不要重复传入由适配器生成的 data、summary_override、heterogeneity 或 study_weights。}
+\item{...}{绘图参数，完整列表见下节。meta 对象输入时不要重复传入由适配器生成的 summary_override、heterogeneity 或 study_weights。}
 }
 \section{全部可调绘图参数}{
 \describe{
@@ -46,7 +46,7 @@ plot_sensspec_forest_meta(sensitivity_meta, specificity_meta, ...,
 异质性来自对应 meta 对象，与 SROC 的双变量模型不是同一个模型；汇总灵敏度和特异度也不保证相同。
 }
 \value{绘制图形并不可见地返回输出文件名；当前设备绘图时返回 NULL。}
-\seealso{\code{\link{plot_sensspec_forest}}, \code{\link{plot_sroc}}}
+\seealso{\code{\link{plot_sroc}}}
 \examples{
 d <- data.frame(study = c("A", "B", "C"),
   TP = c(8, 12, 16), FN = c(2, 4, 3),

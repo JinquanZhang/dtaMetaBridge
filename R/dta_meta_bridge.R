@@ -47,9 +47,8 @@
 
 #' Fit separate random-effects GLMMs for a sensitivity/specificity forest plot.
 #'
-#' The summary estimates are intentionally univariate. Use fit_bivariate_dta()
-#' when the sensitivity-specificity correlation is part of the estimand.
-fit_forest_summary <- function(data, study_col = "study") {
+#' Internal univariate summaries used by the forest-plot renderer.
+.fit_forest_summary <- function(data, study_col = "study") {
   .assert_dta_data(data, study_col)
   fit_prop <- function(event, n) meta::metaprop(event, n, studlab = data[[study_col]], method = "GLMM", method.tau = "ML", method.I2 = "Q")
   sens <- fit_prop(data$TP, data$TP + data$FN)
@@ -123,13 +122,18 @@ dta_from_meta <- function(sensitivity_meta, specificity_meta) {
 #'
 #' By default, the diamond is the exact random-effects summary stored in the
 #' supplied meta objects; study rows are reconstructed from their event/n data.
-plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta, ..., use_meta_summary = TRUE) {
+plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta = NULL, ..., use_meta_summary = TRUE) {
+  if (is.data.frame(sensitivity_meta)) {
+    if (!is.null(specificity_meta)) stop("specificity_meta must be NULL when the first argument is a data frame.", call. = FALSE)
+    return(.plot_sensspec_forest(sensitivity_meta, ...))
+  }
+  if (is.null(specificity_meta)) stop("specificity_meta is required when the first argument is a meta object.", call. = FALSE)
   data <- dta_from_meta(sensitivity_meta, specificity_meta)
   summary_override <- if (use_meta_summary) .meta_summary_override(sensitivity_meta, specificity_meta) else NULL
   heterogeneity <- list(sensitivity = .meta_heterogeneity(sensitivity_meta), specificity = .meta_heterogeneity(specificity_meta))
   study_weights <- list(sensitivity = sensitivity_meta$w.random,
     specificity = specificity_meta$w.random[match(data$study, specificity_meta$studlab)])
-  plot_sensspec_forest(data, summary_override = summary_override, heterogeneity = heterogeneity, study_weights = study_weights, ...)
+  .plot_sensspec_forest(data, summary_override = summary_override, heterogeneity = heterogeneity, study_weights = study_weights, ...)
 }
 
 .draw_forest_panel <- function(values, lower, upper, weights, y, summary, summary_lower, summary_upper, summary_y, region, xlim, square_col = "grey70", square_max_mm = 5, ci_col = "black", ci_lwd = 1.2, diamond_col = "#C00000") {
@@ -148,12 +152,8 @@ plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta, ..., u
   )
 }
 
-#' Draw a two-panel forest plot for sensitivity and specificity.
-#'
-#' @param summary_override Named list containing sens/sens_lwr/sens_upr and/or
-#'   spec/spec_lwr/spec_upr, usually from fit_forest_summary().
-#' @return Invisibly, the supplied output filename (or NULL when drawn to the active device).
-plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", summary_override = NULL, heterogeneity = NULL, sens_axis = seq(0, 1, .2), spec_axis = seq(0, 1, .2), column_widths = c(study = 2.8, tp = .5, fp = .5, fn = .5, tn = .5, sens_text = 1.6, spec_text = 1.6, sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300, heterogeneity_cex = .66, heterogeneity_x = .015, heterogeneity_y = NULL, font_family = "serif", study_weights = NULL,
+#' Internal forest-plot renderer.
+.plot_sensspec_forest <- function(data, output_file = NULL, study_col = "study", summary_override = NULL, heterogeneity = NULL, sens_axis = seq(0, 1, .2), spec_axis = seq(0, 1, .2), column_widths = c(study = 2.8, tp = .5, fp = .5, fn = .5, tn = .5, sens_text = 1.6, spec_text = 1.6, sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300, heterogeneity_cex = .66, heterogeneity_x = .015, heterogeneity_y = NULL, font_family = "serif", study_weights = NULL,
   header_cex = .86, study_cex = .72, ci_text_cex = .68,
   summary_cex = .78, summary_count_cex = .75, summary_ci_cex = .7,
   axis_cex = .68, row_gap = NULL, square_col = "grey70", square_max_mm = 5,

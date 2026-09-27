@@ -53,7 +53,7 @@ remotes::install_github("JinquanZhang/dtaMetaBridge")
 library(dtaMetaBridge)
 ```
 
-固定安装本版：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.3.0")`。
+固定安装本版：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.4.0")`。
 
 更新后请重启 R，再加载包。三个主要函数都有独立中文帮助页，包含用法、参数和示例：
 

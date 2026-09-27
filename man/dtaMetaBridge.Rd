@@ -1,8 +1,6 @@
 \name{dtaMetaBridge}
 \alias{dtaMetaBridge}
 \alias{dta_from_meta}
-\alias{fit_forest_summary}
-\alias{plot_sensspec_forest}
 \title{Diagnostic Test Accuracy Meta-Analysis Bridging meta and SROC Models}
 \description{
 Tools to reconstruct a diagnostic 2x2 table from paired \code{meta::metaprop}
@@ -11,18 +9,6 @@ model, draw an SROC curve, and calculate post-test probabilities.
 }
 \usage{
 dta_from_meta(sensitivity_meta, specificity_meta)
-fit_forest_summary(data, study_col = "study")
-plot_sensspec_forest(data, output_file = NULL, study_col = "study",
-  summary_override = NULL, heterogeneity = NULL, sens_axis = seq(0, 1, 0.2),
-  spec_axis = seq(0, 1, 0.2), column_widths = c(study = 2.8, tp = 0.5,
-  fp = 0.5, fn = 0.5, tn = 0.5, sens_text = 1.6, spec_text = 1.6,
-  sens_plot = 1.2, spec_plot = 1.2), width = 10, height = NULL, res = 300,
-  heterogeneity_cex = 0.66, heterogeneity_x = 0.015, heterogeneity_y = NULL,
-  font_family = "serif", study_weights = NULL,
-  header_cex = 0.86, study_cex = 0.72, ci_text_cex = 0.68,
-  summary_cex = 0.78, summary_count_cex = 0.75, summary_ci_cex = 0.7,
-  axis_cex = 0.68, row_gap = NULL, square_col = "grey70", square_max_mm = 5,
-  ci_col = "black", ci_lwd = 1.2, diamond_col = "#C00000")
 }
 \arguments{
 

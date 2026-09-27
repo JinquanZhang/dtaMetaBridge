@@ -33,6 +33,6 @@ testthat::test_that("forest areas use aligned meta weights and CI is drawn over 
   rects <- Filter(function(g) inherits(g, "rect"), as.list(grid::grid.grab()$children))
   testthat::expect_equal(unname(vapply(rects[1:3], function(g) as.numeric(g$width), numeric(1))), rep(5, 3))
   for (bad in list(c(1, NA, 3), c(-1, 2, 3), c(0, 0, 0), c(1, 2))) {
-    testthat::expect_error(plot_sensspec_forest(d, study_weights = list(sensitivity = bad, specificity = rep(1, 3))), "weights must")
+    testthat::expect_error(plot_sensspec_forest_meta(d, study_weights = list(sensitivity = bad, specificity = rep(1, 3))), "weights must")
   }
 })
