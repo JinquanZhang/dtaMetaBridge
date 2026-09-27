@@ -104,9 +104,73 @@
     random_effects = list(covariance = par$psi))
 }
 
+.meta4diag_interval <- function(x, row, conf_level) {
+  alpha <- (1 - conf_level) / 2
+  qcols <- grep("quant$", colnames(x), value = TRUE)
+  probs <- suppressWarnings(as.numeric(sub("quant$", "", qcols)))
+  if (length(qcols) < 2L || anyNA(probs))
+    stop("meta4diag did not return the requested posterior quantiles.", call. = FALSE)
+  c(est = x[row, "mean"],
+    lwr = x[row, qcols[which.min(abs(probs - alpha))]],
+    upr = x[row, qcols[which.min(abs(probs - (1 - alpha)))]] )
+}
+
+.fit_sroc_meta4diag <- function(data, study_col, sroc_type, conf_level, n_grid,
+  posterior_samples, seed) {
+  if (!requireNamespace("meta4diag", quietly = TRUE) || !requireNamespace("INLA", quietly = TRUE))
+    stop("backend = 'meta4diag' requires both meta4diag and INLA.", call. = FALSE)
+  attached_inla <- "package:INLA" %in% search()
+  if (!attached_inla) {
+    base::library("INLA", character.only = TRUE)
+    on.exit(detach("package:INLA", unload = FALSE, character.only = TRUE), add = TRUE)
+  }
+  d <- data
+  d$studynames <- as.character(data[[study_col]])
+  alpha <- (1 - conf_level) / 2
+  model <- meta4diag::meta4diag(d, model.type = 1, link = "logit",
+    quantiles = c(alpha, .5, 1 - alpha), nsample = posterior_samples,
+    seed = seed, verbose = FALSE)
+  sf <- model$summary.fixed
+  sh <- model$summary.hyperpar
+  mu <- c(sf["mu", "mean"], -sf["nu", "mean"])
+  psi <- matrix(c(sh["var_phi", "mean"],
+    -sh["cor", "mean"] * sqrt(sh["var_phi", "mean"] * sh["var_psi", "mean"]),
+    -sh["cor", "mean"] * sqrt(sh["var_phi", "mean"] * sh["var_psi", "mean"]),
+    sh["var_psi", "mean"]), 2, 2)
+  slope <- .sroc_slope(psi, sroc_type)
+  if (slope <= 0)
+    warning("Selected formula is flat or decreasing versus FPR; AUC is omitted. Consider type 5 and inspect model suitability.", call. = FALSE)
+  curve <- function(x) .sroc_values(x, mu, slope)
+  auc_raw <- meta4diag::AUC(model, sroc.type = sroc_type, est.type = "mean")
+  qauc <- grep("quant$", names(auc_raw), value = TRUE)
+  qprob <- suppressWarnings(as.numeric(sub("quant$", "", qauc)))
+  auc <- c(est = if (slope > 0) unname(auc_raw["est"]) else NA_real_,
+    lwr = if (length(qauc)) unname(auc_raw[qauc[which.min(abs(qprob - alpha))]]) else NA_real_,
+    upr = if (length(qauc)) unname(auc_raw[qauc[which.min(abs(qprob - (1 - alpha)))]] ) else NA_real_)
+  ss <- model$summary.expected.accuracy
+  fixed <- stats::cov(t(rbind(model$samples.fixed["mu", ], -model$samples.fixed["nu", ])))
+  ellipse_roc <- function(v) {
+    e <- ellipse::ellipse(v, centre = mu, level = conf_level)
+    data.frame(sp = 1 - stats::plogis(e[, 2]), se = stats::plogis(e[, 1]))
+  }
+  fpr <- data$FP / (data$FP + data$TN)
+  grid <- seq(max(.001, min(fpr)), min(.999, max(fpr)), length.out = n_grid)
+  list(model = model, backend = "meta4diag", model_type = "meta4diag::meta4diag",
+    sroc_type = sroc_type, curve_parameters = list(mu = mu, slope = slope),
+    input_data = data, interval_type = "95% CrI",
+    metrics = list(sensitivity = .meta4diag_interval(ss, "mean(Se)", conf_level),
+      specificity = .meta4diag_interval(ss, "mean(Sp)", conf_level), auc = auc,
+      pauc = if (slope > 0 && diff(range(fpr)) > 0) stats::integrate(curve, min(fpr), max(fpr))$value else NA_real_),
+    plot_data = list(confidence = ellipse_roc(fixed), prediction = ellipse_roc(fixed + psi),
+      sroc = data.frame(sp = 1 - grid, se = curve(grid)),
+      studies = data.frame(Study = as.character(data[[study_col]]),
+        specificity = data$TN / (data$TN + data$FP), sensitivity = data$TP / (data$TP + data$FN))),
+    random_effects = list(covariance = psi))
+}
+
 fit_sroc <- function(data, backend = c("dtametaTMB", "mada", "meta4diag"),
   sroc_type = 5L, study_col = "study", year_col = "Year",
-  conf_level = .95, n_grid = 1000, auc_boot = 0L, seed = 2026) {
+  conf_level = .95, n_grid = 1000, auc_boot = 0L, posterior_samples = 2000L, seed = 2026) {
   if (!is.data.frame(data)) stop("data must be a data.frame.", call. = FALSE)
   if (!is.numeric(sroc_type) || length(sroc_type) != 1L || is.na(sroc_type) ||
       !sroc_type %in% 1:5) stop("sroc_type must be an integer from 1 to 5.", call. = FALSE)
@@ -117,6 +181,8 @@ fit_sroc <- function(data, backend = c("dtametaTMB", "mada", "meta4diag"),
     stop("conf_level must be strictly between 0 and 1.", call. = FALSE)
   if (!is.numeric(auc_boot) || length(auc_boot) != 1L || auc_boot < 0 || auc_boot != floor(auc_boot))
     stop("auc_boot must be a non-negative integer.", call. = FALSE)
+  if (!is.numeric(posterior_samples) || length(posterior_samples) != 1L || posterior_samples < 20 || posterior_samples != floor(posterior_samples))
+    stop("posterior_samples must be an integer >= 20.", call. = FALSE)
   if (!is.character(study_col) || length(study_col) != 1L || is.na(study_col))
     stop("study_col must be one column name.", call. = FALSE)
   if (!is.null(year_col) && (!is.character(year_col) || length(year_col) != 1L || is.na(year_col)))
@@ -134,7 +200,12 @@ fit_sroc <- function(data, backend = c("dtametaTMB", "mada", "meta4diag"),
     out$input_data <- data
     return(out)
   }
-  if (backend == "meta4diag") stop("The meta4diag backend needs INLA and is not yet implemented in this development build.", call. = FALSE)
+  if (backend == "meta4diag") {
+    out <- .fit_sroc_meta4diag(d, study_col, as.integer(sroc_type), conf_level,
+      n_grid, as.integer(posterior_samples), seed)
+    out$input_data <- data
+    return(out)
+  }
   fit <- fit_bivariate_dta(d, study_col = study_col, n_grid = n_grid)
   Psi <- fit$model$Psi
   mu <- unname(stats::coef(fit$model)["(Intercept)", ])
