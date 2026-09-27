@@ -90,7 +90,7 @@
     data.frame(sp = 1 - stats::plogis(e[, 2]), se = stats::plogis(e[, 1]))
   }
   grid <- seq(max(.001, min(fpr)), min(.999, max(fpr)), length.out = n_grid)
-  list(model = model, backend = "dtametaTMB", model_type = "dtametaTMB::fitReitsma",
+  list(model = model, backend = "frequency", model_type = "dtametaTMB::fitReitsma",
     sroc_type = sroc_type, curve_parameters = list(mu = par$mu, slope = slope),
     input_data = data, interval_type = "95% CI",
     metrics = list(sensitivity = sens, specificity = spec,
@@ -155,7 +155,7 @@
   }
   fpr <- data$FP / (data$FP + data$TN)
   grid <- seq(max(.001, min(fpr)), min(.999, max(fpr)), length.out = n_grid)
-  list(model = model, backend = "meta4diag", model_type = "meta4diag::meta4diag",
+  list(model = model, backend = "bayes", model_type = "meta4diag::meta4diag",
     sroc_type = sroc_type, curve_parameters = list(mu = mu, slope = slope),
     input_data = data, interval_type = "95% CrI",
     metrics = list(sensitivity = .meta4diag_interval(ss, "mean(Se)", conf_level),
@@ -168,7 +168,7 @@
     random_effects = list(covariance = psi))
 }
 
-fit_sroc <- function(data, backend = c("dtametaTMB", "mada", "meta4diag"),
+fit_sroc <- function(data, backend = c("frequency", "bayes", "legacy"),
   sroc_type = 5L, study_col = "study", year_col = "Year",
   conf_level = .95, n_grid = 1000, auc_boot = 0L, posterior_samples = 2000L, seed = 2026) {
   if (!is.data.frame(data)) stop("data must be a data.frame.", call. = FALSE)
@@ -194,13 +194,13 @@ fit_sroc <- function(data, backend = c("dtametaTMB", "mada", "meta4diag"),
   if (anyDuplicated(labels)) warning("Duplicate study/year labels: rows retained separately. Verify independent cohorts; repeated thresholds are not independent studies.", call. = FALSE)
   d <- data
   d[[study_col]] <- make.unique(labels, sep = " #")
-  if (backend == "dtametaTMB") {
+  if (backend == "frequency") {
     out <- .fit_sroc_dtameta(d, study_col, as.integer(sroc_type), conf_level,
       n_grid, as.integer(auc_boot), seed)
     out$input_data <- data
     return(out)
   }
-  if (backend == "meta4diag") {
+  if (backend == "bayes") {
     out <- .fit_sroc_meta4diag(d, study_col, as.integer(sroc_type), conf_level,
       n_grid, as.integer(posterior_samples), seed)
     out$input_data <- data

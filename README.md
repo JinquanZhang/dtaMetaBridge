@@ -7,9 +7,9 @@ meta 分析，提供双森林图、二项似然 Reitsma 双变量模型、Rutter
 
 ### 四格表直接拟合五种 SROC 曲线
 
-`fit_sroc()` 默认用 `dtametaTMB::fitReitsma()` 对四格表作频率学二项似然双变量拟合。
+`fit_sroc()` 默认用频率学二项似然双变量模型拟合四格表。
 五条曲线沿用 `meta4diag::SROC()` 的 1--5 公式编号；默认第 5 条是
-Rutter–Gatsonis 曲线。`backend = "meta4diag"` 可调用 INLA 贝叶斯双变量模型；
+Rutter–Gatsonis 曲线。`backend = "bayes"` 可调用 INLA 贝叶斯双变量模型；
 须先安装 `INLA` 与 `meta4diag`。
 
 ```r
@@ -28,13 +28,13 @@ plot_sroc(fit, full_curve = TRUE)
 
 ```r
 fit_bayes <- fit_sroc(
-  df_dat, backend = "meta4diag", sroc_type = 5,
+  df_dat, backend = "bayes", sroc_type = 5,
   posterior_samples = 2000
 )
 plot_sroc(fit_bayes, full_curve = TRUE)
 ```
 
-`dtametaTMB` 的 AUC 区间是研究层 Bootstrap 95% CI；`meta4diag` 的 AUC 区间是
+`frequency` 的 AUC 区间是研究层 Bootstrap 95% CI；`bayes` 的 AUC 区间是
 后验 95% CrI，两者不能按相同的频率学含义解读。
 
 类型编号：1 回归线1，2 主轴，3 Moses–Littenberg 型曲线，4 回归线2，5 Rutter–Gatsonis（默认）。
@@ -53,7 +53,7 @@ remotes::install_github("JinquanZhang/dtaMetaBridge")
 library(dtaMetaBridge)
 ```
 
-固定安装本版：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.2.0")`。
+固定安装本版：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.2.1")`。
 
 更新后请重启 R，再加载包。三个主要函数都有独立中文帮助页，包含用法、参数和示例：
 

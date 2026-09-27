@@ -17,7 +17,7 @@ test_that("user data retain duplicate rows, zero cells and original counts", {
     Year=c("2023","2024","2018","2018"), TP=c(52,15,20,10),
     FP=c(1,4,1,0), FN=c(19,5,4,14), TN=c(16,29,19,20))
   testthat::skip_if_not_installed("dtametaTMB")
-  fits <- lapply(1:5, function(i) suppressWarnings(fit_sroc(d, backend="dtametaTMB", sroc_type=i, auc_boot=0)))
+  fits <- lapply(1:5, function(i) suppressWarnings(fit_sroc(d, backend="frequency", sroc_type=i, auc_boot=0)))
   for (i in 1:5) {
     f <- fits[[i]]
     expect_identical(f$input_data, d)
@@ -33,7 +33,7 @@ test_that("user data retain duplicate rows, zero cells and original counts", {
     } else expect_true(is.na(f$metrics$auc[1]))
     expect_s3_class(plot_sroc(f, full_curve=TRUE, show_legend=FALSE), "ggplot")
   }
-  expect_error(fit_sroc(d, backend="dtametaTMB", sroc_type=6), "1 to 5")
+  expect_error(fit_sroc(d, backend="frequency", sroc_type=6), "1 to 5")
   expect_error(fit_sroc(d, n_grid=NA_real_), "n_grid")
   expect_error(fit_sroc(d, conf_level=1), "conf_level")
 })
