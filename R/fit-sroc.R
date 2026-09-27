@@ -168,7 +168,7 @@
     random_effects = list(covariance = psi))
 }
 
-fit_sroc <- function(data, backend = c("frequency", "bayes", "legacy"),
+fit_sroc <- function(data, backend = c("frequency", "bayes"),
   sroc_type = 5L, study_col = "study", year_col = "Year",
   conf_level = .95, n_grid = 1000, auc_boot = 0L, posterior_samples = 2000L, seed = 2026) {
   if (!is.data.frame(data)) stop("data must be a data.frame.", call. = FALSE)
@@ -206,22 +206,4 @@ fit_sroc <- function(data, backend = c("frequency", "bayes", "legacy"),
     out$input_data <- data
     return(out)
   }
-  fit <- fit_bivariate_dta(d, study_col = study_col, n_grid = n_grid)
-  Psi <- fit$model$Psi
-  mu <- unname(stats::coef(fit$model)["(Intercept)", ])
-  slope <- .sroc_slope(Psi, as.integer(sroc_type))
-  rho <- Psi[1, 2] / sqrt(Psi[1, 1] * Psi[2, 2])
-  if (abs(rho) > .999) warning("Between-study correlation is near its boundary; SROC formulas may coincide and estimates may be unstable.", call. = FALSE)
-  if (slope <= 0) warning("Selected formula is flat or decreasing versus FPR; AUC is omitted. Consider type 5 and inspect model suitability.", call. = FALSE)
-  fit$sroc_type <- as.integer(sroc_type)
-  fit$curve_parameters <- list(mu = mu, slope = slope)
-  fit$model_type <- paste("mada::reitsma SROC formula", sroc_type)
-  fit$input_data <- data
-  fit$plot_data$sroc$se <- .sroc_values(1 - fit$plot_data$sroc$sp, mu, slope)
-  curve <- function(x) .sroc_values(x, mu, slope)
-  observed <- range(data$FP / (data$FP + data$TN))
-  fit$metrics$auc <- c(est = if (slope > 0) stats::integrate(curve, 0, 1, rel.tol = 1e-8)$value else NA_real_, lwr = NA_real_, upr = NA_real_)
-  fit$metrics$pauc <- if (slope <= 0) NA_real_ else if (diff(observed) == 0) 0 else
-    stats::integrate(curve, observed[1], observed[2], rel.tol = 1e-8)$value
-  fit
 }

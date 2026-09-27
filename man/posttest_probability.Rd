@@ -7,7 +7,7 @@
 posttest_probability(fit, prevalence = 0.3, n_sims = 3000, seed = 2026)
 }
 \arguments{
-\item{fit}{\code{fit_bivariate_meta} 或 \code{fit_bivariate_dta} 的结果；底层模型为 reitsma 或 glmerMod。}
+\item{fit}{\code{fit_sroc} 的结果。}
 \item{prevalence}{一个或多个检验前患病概率，必须严格介于 0 与 1；不是百分数。}
 \item{n_sims}{区间计算的蒙特卡洛模拟次数，不小于 100 的整数；默认 3000。}
 \item{seed}{随机种子，默认 2026；函数结束后恢复原随机数状态。}
@@ -25,12 +25,12 @@ prevalence（检验前概率）、sensitivity（汇总灵敏度）、
 specificity（汇总特异度）、ppv、ppv_lwr、ppv_upr、
 npv、npv_lwr、npv_upr（预测值及其模拟 95\% 区间）。
 }
-\seealso{\code{\link{fit_bivariate_meta}}, \code{\link{plot_sroc}}}
+\seealso{\code{\link{fit_sroc}}, \code{\link{plot_sroc}}}
 \examples{
 d <- data.frame(study = LETTERS[1:6],
   TP = c(35, 42, 28, 60, 45, 70), FN = c(15, 8, 22, 20, 15, 10),
   TN = c(80, 65, 90, 55, 75, 60), FP = c(20, 35, 10, 45, 25, 40))
-fit <- fit_bivariate_dta(d)
+fit <- fit_sroc(d, backend = "frequency")
 posttest_probability(fit, prevalence = c(0.1, 0.3, 0.5),
   n_sims = 1000, seed = 2026)
 }

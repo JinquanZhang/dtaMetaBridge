@@ -3,8 +3,6 @@
 \alias{dta_from_meta}
 \alias{fit_forest_summary}
 \alias{plot_sensspec_forest}
-\alias{fit_bivariate_dta}
-\alias{fit_bivariate_meta}
 \title{Diagnostic Test Accuracy Meta-Analysis Bridging meta and SROC Models}
 \description{
 Tools to reconstruct a diagnostic 2x2 table from paired \code{meta::metaprop}
@@ -25,12 +23,6 @@ plot_sensspec_forest(data, output_file = NULL, study_col = "study",
   summary_cex = 0.78, summary_count_cex = 0.75, summary_ci_cex = 0.7,
   axis_cex = 0.68, row_gap = NULL, square_col = "grey70", square_max_mm = 5,
   ci_col = "black", ci_lwd = 1.2, diamond_col = "#C00000")
-fit_bivariate_dta(data, study_col = "study", correction = 0.5,
-  correction_control = c("single", "all", "none"),
-  method = c("reml", "ml", "fixed"),
-  sroc_type = c("ruttergatsonis", "qmd", "midas", "naive"), n_grid = 1000,
-  seed = 2026, n_mc = 3000)
-fit_bivariate_meta(sensitivity_meta, specificity_meta, ...)
 }
 \arguments{
 
@@ -105,7 +97,6 @@ fit_bivariate_meta(sensitivity_meta, specificity_meta, ...)
   \item{width,height}{Saved plot width and height in inches. Forest height is automatic when NULL.}
 
   \item{seed}{Random seed for QMD Monte Carlo simulation.}
-  \item{...}{Further arguments passed to fit_bivariate_dta.}
 }
 \value{
 \code{dta_from_meta} returns a 2x2 data frame. The fit functions return a list
@@ -141,7 +132,7 @@ sens <- meta::metaprop(TP, TP + FN, studlab = study, data = dta,
                        method = "GLMM", method.tau = "ML")
 spec <- meta::metaprop(TN, TN + FP, studlab = study, data = dta,
                        method = "GLMM", method.tau = "ML")
-fit <- fit_bivariate_meta(sens, spec)
+fit <- fit_sroc(dta_from_meta(sens, spec), backend = "frequency")
 plot_sroc(fit)
 posttest_probability(fit, c(0.1, 0.3))
 }

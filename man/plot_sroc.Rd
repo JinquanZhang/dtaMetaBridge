@@ -20,7 +20,7 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   y_breaks = seq(0, 1, 0.2))
 }
 \arguments{
-\item{fit}{\code{fit_bivariate_meta} 或 \code{fit_bivariate_dta} 返回的拟合对象。}
+\item{fit}{\code{fit_sroc} 返回的拟合对象。}
 \item{show_confidence}{是否显示汇总点的 95\% 置信区域。}
 \item{show_prediction}{是否显示 95\% 预测区域。}
 \item{output_file}{保存路径；NULL 不保存。格式由 \code{ggplot2::ggsave} 支持情况决定。}
@@ -60,12 +60,12 @@ full_curve 只改变绘图，不改变汇总估计、AUC 或区域；观察范�
 置信区域描述汇总点不确定性，预测区域描述新研究可能的真实效应，不是曲线置信带。
 }
 \value{可继续用 ggplot2 修改或保存的 ggplot 对象。}
-\seealso{\code{\link{fit_bivariate_meta}}, \code{\link{posttest_probability}}}
+\seealso{\code{\link{fit_sroc}}, \code{\link{posttest_probability}}}
 \examples{
 d <- data.frame(study = LETTERS[1:6],
   TP = c(35, 42, 28, 60, 45, 70), FN = c(15, 8, 22, 20, 15, 10),
   TN = c(80, 65, 90, 55, 75, 60), FP = c(20, 35, 10, 45, 25, 40))
-fit <- fit_bivariate_dta(d)
+fit <- fit_sroc(d, backend = "frequency")
 plot_sroc(fit, full_curve = TRUE, legend_position = "bottomright",
   show_study_labels = FALSE, sroc_col = "navy")
 }

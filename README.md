@@ -53,7 +53,7 @@ remotes::install_github("JinquanZhang/dtaMetaBridge")
 library(dtaMetaBridge)
 ```
 
-固定安装本版：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.2.1")`。
+固定安装本版：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.3.0")`。
 
 更新后请重启 R，再加载包。三个主要函数都有独立中文帮助页，包含用法、参数和示例：
 
@@ -98,15 +98,12 @@ meta_spec <- metaprop(TN, TN + FP, studlab = study, data = dta,
 plot_sensspec_forest_meta(meta_sens, meta_spec,
                            output_file = "forest.png")
 
-# 3. Reitsma 双变量模型 + Rutter–Gatsonis HSROC（默认）。
-fit <- fit_bivariate_meta(meta_sens, meta_spec)
+# 3. 由还原的四格表拟合频率学双变量模型 + Rutter–Gatsonis HSROC。
+fit <- fit_sroc(dta_from_meta(meta_sens, meta_spec), backend = "frequency")
 plot_sroc(fit)
 
 # 绘制完整的 Rutter-Gatsonis 曲线（包括观察范围外的模型外推）
 plot_sroc(fit, full_curve = TRUE)
-
-# 显式指定方法也可以：
-# fit <- fit_bivariate_meta(meta_sens, meta_spec, sroc_type = "ruttergatsonis")
 
 # 4. 按预检概率计算阳性和阴性后的患病概率及 95% 不确定性区间。
 posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
@@ -217,7 +214,7 @@ plot_sensspec_forest_meta(
 手动位置不会自动避让其他元素；增大字体或移动文字后，请检查是否重叠或超出图边界。
 
 - 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。
-- SROC：`fit_sroc()` 默认 `sroc_type = 5`，以二项似然 Reitsma 双变量模型后按 HSROC 参数化生成曲线；零格由二项模型直接处理。旧的 `fit_bivariate_dta()` 仍保留 `mada` 正态近似。
+- SROC：`fit_sroc()` 默认 `sroc_type = 5`，以二项似然双变量模型后按 HSROC 参数化生成曲线；零格由二项模型直接处理。
 - 曲线默认只显示观察到的 FPR 范围；完整 AUC 对同一曲线在 FPR 0–1 上积分，包含范围外的模型外推。`pauc` 是观察范围内的未标准化面积。
 - `fit_sroc(..., auc_boot = 2000)` 可给 AUC 研究层 Bootstrap 95% CI；图中置信轮廓针对联合汇总点，不是整条 SROC 的置信带。
 - `qmd`、`midas`、`naive` 仅为显式可选方法；不是本文默认方法。
@@ -265,8 +262,6 @@ MIDAS 绘图现与其他分支共用渲染函数，也支持这些选项（其�
 | --- | --- |
 | `dta_from_meta()` | 从匹配的灵敏度和特异度 `metaprop` 对象还原四格表。 |
 | `plot_sensspec_forest_meta()` | 保留 `meta` 随机效应汇总菱形，绘制双森林图。 |
-| `fit_bivariate_meta()` / `fit_bivariate_dta()` | 从 `meta` 对象或四格表拟合双变量模型；默认 Reitsma / Rutter–Gatsonis 方法。 |
-| `fit_metandi()` / `plot_metandi()` | 保留原 QMD 函数供历史结果复现；不作为推荐默认算法。 |
 | `plot_sroc()` | 绘制 HSROC 曲线、置信轮廓、预测轮廓和研究点。 |
 | `posttest_probability()` | 计算不同预检概率下的 PPV、NPV 及模拟法 95% 区间。 |
 

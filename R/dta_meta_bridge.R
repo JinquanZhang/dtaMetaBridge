@@ -356,29 +356,22 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
   if (length(list(...))) stop("Unknown plot_sroc arguments: ", paste(names(list(...)), collapse = ", "), call. = FALSE)
   if (!is.logical(full_curve) || length(full_curve) != 1L || is.na(full_curve))
     stop("full_curve must be TRUE or FALSE.", call. = FALSE)
-  if (full_curve && is.null(fit$curve_parameters) && !identical(fit$model_type, "mada::reitsma ruttergatsonis SROC"))
-    stop("full_curve = TRUE currently supports the ruttergatsonis model only.", call. = FALSE)
-  is_qmd <- identical(fit$backend, "qmd") || !is.null(fit$plot_data$sroc_df)
-  if (is.null(auc_digits)) auc_digits <- if (is_qmd) digits else 3
+  if (is.null(fit$curve_parameters))
+    stop("fit must be returned by fit_sroc().", call. = FALSE)
+  if (is.null(auc_digits)) auc_digits <- 3
   if (!is.null(fit$curve_parameters) && fit$curve_parameters$slope <= 0 && is.null(custom_auc))
     custom_auc <- "AUC unavailable (non-increasing curve)"
-  if (is_qmd) {
-    adapted <- fit
-  } else {
-    pd <- fit$plot_data
-    if (full_curve) {
-      fpr <- seq(0, 1, length.out = max(2001L, nrow(pd$sroc)))
-      curve <- if (!is.null(fit$curve_parameters)) function(x)
-        .sroc_values(x, fit$curve_parameters$mu, fit$curve_parameters$slope) else
-        mada::sroc(fit$model, type = "ruttergatsonis", return_function = TRUE)
-      pd$sroc <- data.frame(sp = 1 - fpr, se = curve(fpr))
-    }
-    # ponytail: share one renderer across backends so every style control works.
-    adapted <- list(metrics = list(se = fit$metrics$sensitivity, sp = fit$metrics$specificity, auc = fit$metrics$auc),
-      plot_data = list(conf_df = pd$confidence, pred_df = pd$prediction, sroc_df = pd$sroc,
-        study_df = data.frame(Study = pd$studies$Study, study_id = seq_len(nrow(pd$studies)),
-          se = pd$studies$sensitivity, sp = pd$studies$specificity)))
+  pd <- fit$plot_data
+  if (full_curve) {
+    fpr <- seq(0, 1, length.out = max(2001L, nrow(pd$sroc)))
+    pd$sroc <- data.frame(sp = 1 - fpr, se = .sroc_values(fpr,
+      fit$curve_parameters$mu, fit$curve_parameters$slope))
   }
+  # ponytail: share one renderer across the two supported fit_sroc backends.
+  adapted <- list(metrics = list(se = fit$metrics$sensitivity, sp = fit$metrics$specificity, auc = fit$metrics$auc),
+    plot_data = list(conf_df = pd$confidence, pred_df = pd$prediction, sroc_df = pd$sroc,
+      study_df = data.frame(Study = pd$studies$Study, study_id = seq_len(nrow(pd$studies)),
+        se = pd$studies$sensitivity, sp = pd$studies$specificity)))
   p <- plot_metandi(adapted, digits = digits, show_conf = show_confidence, show_pred = show_prediction,
     show_legend = show_legend, custom_se = custom_se, custom_sp = custom_sp, custom_auc = custom_auc,
     legend_position = legend_position, legend_text_size = legend_text_size, legend_bg = legend_bg,
@@ -399,14 +392,17 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
 posttest_probability <- function(fit, prevalence = .3, n_sims = 3000, seed = 2026) {
   if (!is.numeric(prevalence) || any(!is.finite(prevalence)) || any(prevalence <= 0 | prevalence >= 1)) stop("prevalence must contain values strictly between 0 and 1.", call. = FALSE)
   if (length(n_sims) != 1 || n_sims < 100 || n_sims != floor(n_sims)) stop("n_sims must be an integer of at least 100.", call. = FALSE)
-  model <- fit$model
-  if (inherits(model, "glmerMod")) {
-    beta <- unname(lme4::fixef(model)) * c(1, -1)
-    transform <- diag(c(1, -1))
-    vcov_beta <- transform %*% as.matrix(stats::vcov(model)) %*% transform
-  } else if (inherits(model, "reitsma")) {
-    beta <- stats::coef(model)["(Intercept)", ]; vcov_beta <- as.matrix(stats::vcov(model))
-  } else stop("fit must be returned by fit_bivariate_dta() or fit_bivariate_meta().", call. = FALSE)
+  if (!identical(fit$backend, "frequency") && !identical(fit$backend, "bayes"))
+    stop("fit must be returned by fit_sroc().", call. = FALSE)
+  if (identical(fit$backend, "frequency")) {
+    par <- .dtameta_parameters(fit$model)
+    beta <- par$mu
+    vcov_beta <- par$fixed
+  } else {
+    beta <- fit$curve_parameters$mu
+    vcov_beta <- stats::cov(t(rbind(fit$model$samples.fixed["mu", ],
+      -fit$model$samples.fixed["nu", ])))
+  }
   sens <- stats::plogis(beta[1]); spec <- 1 - stats::plogis(beta[2])
   old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) get(".Random.seed", envir = .GlobalEnv) else NULL
   on.exit({ if (is.null(old_seed)) rm(".Random.seed", envir = .GlobalEnv) else assign(".Random.seed", old_seed, envir = .GlobalEnv) }, add = TRUE)
