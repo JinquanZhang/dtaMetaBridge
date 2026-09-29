@@ -280,7 +280,7 @@ plot_metandi <- function(model_obj, digits = 2,
       
       # Observed study marker
       ggplot2::annotate("point", x = x_line, y = y_pos$obs, shape = 21, size = study_size, color = col_obs, fill = "white", stroke = 1.2) +
-      ggplot2::annotate("text", x = x_text, y = y_pos$obs, label = labels[["obs"]], hjust = 0, size = legend_text_size * 4 / 3.5, family = font_family, fontface = "bold") +
+      ggplot2::annotate("text", x = x_text, y = y_pos$obs, label = labels[["obs"]], hjust = 0, size = legend_text_size * 4 / 3.5, family = font_family) +
       
       ggplot2::annotate("point", x = x_line, y = y_pos$sum, shape = 23, size = summary_size, color = col_sum, fill = col_sum) +
       ggplot2::annotate("text", x = x_text, y = y_pos$sum, 

@@ -1,3 +1,7 @@
+# dtaMetaBridge 1.5.7
+
+- SROC 图例全部使用常规字重。
+
 # dtaMetaBridge 1.5.6
 
 - 清理 SROC 图例实现的格式检查警告；功能不变。
