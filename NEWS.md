@@ -1,3 +1,7 @@
+# dtaMetaBridge 1.5.3
+
+- `plot_sroc()` 的汇总点改为 45° 旋转正方形（菱形）；新增 `study_col` 控制研究圈及编号颜色，`sroc_col` 仅控制 SROC 曲线颜色。
+
 # dtaMetaBridge 1.5.2
 
 - `fit_sroc()` 新增 `n_cores`（默认 6），以 R 标准库 `parallel` 并行执行频率学 AUC Bootstrap，并使用独立随机数流保证可复现；自动不超过可用物理核心数。

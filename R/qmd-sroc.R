@@ -120,7 +120,7 @@ plot_metandi <- function(model_obj, digits = 2,
                          legend_bg = "#F8F9FA", font_family = "sans", base_size = 14,
                          title = "SROC with Prediction & Confidence Contours",
                          show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
-                         summary_size = 4.5, summary_col = "#C0392B",
+                         study_col = "#7F8C8D", summary_size = 4.5, summary_col = "#C0392B",
                          sroc_col = "#2C3E50", sroc_linewidth = 1.2,
                          confidence_col = "#2980B9", confidence_alpha = .2,
                          prediction_col = "#BDC3C7", prediction_alpha = .15,
@@ -147,7 +147,7 @@ plot_metandi <- function(model_obj, digits = 2,
     if (!is.numeric(value) || length(value) != 1L || !is.finite(value) || value < 0 || value > 1)
       stop(name, " must be between 0 and 1.", call. = FALSE)
   }
-  for (name in c("legend_bg", "summary_col", "sroc_col", "confidence_col", "prediction_col")) {
+  for (name in c("legend_bg", "study_col", "summary_col", "sroc_col", "confidence_col", "prediction_col")) {
     value <- get(name)
     if (!is.character(value) || length(value) != 1L || is.na(value) ||
         inherits(try(grDevices::col2rgb(value), silent = TRUE), "try-error"))
@@ -188,7 +188,7 @@ plot_metandi <- function(model_obj, digits = 2,
   col_sroc <- sroc_col   # SROC curve
   col_conf <- confidence_col   # confidence contour
   col_pred <- prediction_col   # prediction contour
-  col_obs  <- "#7F8C8D"   # observed studies
+  col_obs  <- study_col   # observed studies
   col_sum  <- summary_col   # summary point
   bg_box   <- legend_bg   # legend background
   
@@ -216,10 +216,10 @@ plot_metandi <- function(model_obj, digits = 2,
     ggplot2::geom_point(data = pd$study_df, ggplot2::aes(x = sp, y = se), 
                shape = 21, size = study_size, fill = ggplot2::alpha("white", 0.6), color = col_obs, stroke = 1.2) +
     (if (show_study_labels) ggplot2::geom_text(data = pd$study_df, ggplot2::aes(x = sp, y = se, label = study_id),
-              size = study_label_size, family = font_family, color = col_sroc) else NULL) +
+              size = study_label_size, family = font_family, color = col_obs) else NULL) +
     
     ggplot2::geom_point(ggplot2::aes(x = mt$sp[1], y = mt$se[1]), 
-               shape = 15, size = summary_size, color = col_sum) +
+               shape = 23, size = summary_size, fill = col_sum, color = col_sum) +
     
     # Reverse the x-axis so higher specificity is on the left
     ggplot2::scale_x_reverse(limits = c(1, 0), expand = c(0, 0), breaks = x_breaks) +
@@ -283,7 +283,7 @@ plot_metandi <- function(model_obj, digits = 2,
       ggplot2::annotate("point", x = x_line, y = y_pos$obs, shape = 21, size = study_size, color = col_obs, fill = "white", stroke = 1.2) +
       ggplot2::annotate("text", x = x_text, y = y_pos$obs, label = "Observed Data", hjust = 0, size = legend_text_size * 4 / 3.5, family = font_family, fontface = "bold") +
       
-      ggplot2::annotate("point", x = x_line, y = y_pos$sum, shape = 15, size = summary_size, color = col_sum) +
+      ggplot2::annotate("point", x = x_line, y = y_pos$sum, shape = 23, size = summary_size, color = col_sum, fill = col_sum) +
       ggplot2::annotate("text", x = x_text, y = y_pos$sum, 
                label = sprintf("Summary Point\n%s\n%s", str_se, str_sp), 
                hjust = 0, size = legend_text_size, family = font_family, lineheight = 1.1) +

@@ -349,7 +349,8 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
   legend_position = "bottomright", legend_text_size = 3.5, legend_bg = "#F8F9FA",
   font_family = "sans", base_size = 14, title = "SROC with Prediction & Confidence Contours",
   show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
-  summary_size = 4.5, summary_col = "#C0392B", sroc_col = "#2C3E50", sroc_linewidth = 1.2,
+  study_col = "#7F8C8D", summary_size = 4.5, summary_col = "#C0392B",
+  sroc_col = "#2C3E50", sroc_linewidth = 1.2,
   confidence_col = "#2980B9", confidence_alpha = .2,
   prediction_col = "#BDC3C7", prediction_alpha = .15,
   auc_digits = NULL, x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2)) {
@@ -378,7 +379,7 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
     show_legend = show_legend, custom_se = custom_se, custom_sp = custom_sp, custom_auc = custom_auc,
     legend_position = legend_position, legend_text_size = legend_text_size, legend_bg = legend_bg,
     font_family = font_family, base_size = base_size, title = title,
-    show_study_labels = show_study_labels, study_size = study_size, study_label_size = study_label_size,
+    show_study_labels = show_study_labels, study_size = study_size, study_label_size = study_label_size, study_col = study_col,
     summary_size = summary_size, summary_col = summary_col, sroc_col = sroc_col, sroc_linewidth = sroc_linewidth,
     confidence_col = confidence_col, confidence_alpha = confidence_alpha,
     prediction_col = prediction_col, prediction_alpha = prediction_alpha,
