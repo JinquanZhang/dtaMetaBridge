@@ -227,7 +227,7 @@ plot_metandi <- function(model_obj, digits = 2,
     (if (show_study_labels) ggplot2::geom_text(data = pd$study_df, ggplot2::aes(x = sp, y = se, label = study_id),
               size = study_label_size, family = font_family, color = study_label_col) else NULL) +
     
-    ggplot2::geom_point(ggplot2::aes(x = mt_plot$sp[1], y = mt_plot$se[1]), 
+    ggplot2::geom_point(ggplot2::aes(x = mt_plot$sp[1], y = mt_plot$se[1]),
                shape = 23, size = summary_size, fill = col_sum, color = col_sum) +
     
     (if (x_axis == "specificity")
@@ -237,7 +237,7 @@ plot_metandi <- function(model_obj, digits = 2,
     ggplot2::coord_fixed(ratio = 1) +
     
     # Add axis labels and title
-    ggplot2::labs(x = if (x_axis == "specificity") "Specificity" else "1 - Specificity", y = "Sensitivity", 
+    ggplot2::labs(x = if (x_axis == "specificity") "Specificity" else "1 - Specificity", y = "Sensitivity",
          title = title) +
     ggplot2::theme_classic(base_size = base_size, base_family = font_family) +
     ggplot2::theme(
