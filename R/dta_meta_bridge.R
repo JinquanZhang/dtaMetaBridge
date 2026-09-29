@@ -353,10 +353,12 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
   sroc_col = "#2C3E50", sroc_linewidth = 1.2,
   confidence_col = "#2980B9", confidence_alpha = .2,
   prediction_col = "#BDC3C7", prediction_alpha = .15,
-  auc_digits = NULL, x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2)) {
+  auc_digits = NULL, x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2),
+  x_axis = c("specificity", "fpr")) {
   if (length(list(...))) stop("Unknown plot_sroc arguments: ", paste(names(list(...)), collapse = ", "), call. = FALSE)
   if (!is.logical(full_curve) || length(full_curve) != 1L || is.na(full_curve))
     stop("full_curve must be TRUE or FALSE.", call. = FALSE)
+  x_axis <- match.arg(x_axis)
   if (is.null(fit$curve_parameters))
     stop("fit must be returned by fit_sroc().", call. = FALSE)
   if (is.null(auc_digits)) auc_digits <- 3
@@ -384,7 +386,7 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
     summary_size = summary_size, summary_col = summary_col, sroc_col = sroc_col, sroc_linewidth = sroc_linewidth,
     confidence_col = confidence_col, confidence_alpha = confidence_alpha,
     prediction_col = prediction_col, prediction_alpha = prediction_alpha,
-    auc_digits = auc_digits, x_breaks = x_breaks, y_breaks = y_breaks)
+    auc_digits = auc_digits, x_breaks = x_breaks, y_breaks = y_breaks, x_axis = x_axis)
   if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
   p
 }

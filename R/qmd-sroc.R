@@ -126,7 +126,8 @@ plot_metandi <- function(model_obj, digits = 2,
                          confidence_col = "#2980B9", confidence_alpha = .2,
                          prediction_col = "#BDC3C7", prediction_alpha = .15,
                          auc_digits = digits, x_breaks = seq(0, 1, .2),
-                         y_breaks = seq(0, 1, .2)) {
+                         y_breaks = seq(0, 1, .2), x_axis = c("specificity", "fpr")) {
+  x_axis <- match.arg(x_axis)
   for (name in c("show_conf", "show_pred", "show_legend", "show_study_labels")) {
     value <- get(name)
     if (!is.logical(value) || length(value) != 1L || is.na(value))
@@ -174,6 +175,11 @@ plot_metandi <- function(model_obj, digits = 2,
   # 1. Extract model outputs
   pd <- model_obj$plot_data
   mt <- model_obj$metrics
+  mt_plot <- mt
+  if (x_axis == "fpr") {
+    for (name in c("conf_df", "pred_df", "sroc_df", "study_df")) pd[[name]]$sp <- 1 - pd[[name]]$sp
+    mt_plot$sp[1] <- 1 - mt_plot$sp[1]
+  }
   
   # 2. Format summary text
   fmt <- function(x) sprintf(paste0("%.", digits, "f"), x)
@@ -221,16 +227,17 @@ plot_metandi <- function(model_obj, digits = 2,
     (if (show_study_labels) ggplot2::geom_text(data = pd$study_df, ggplot2::aes(x = sp, y = se, label = study_id),
               size = study_label_size, family = font_family, color = study_label_col) else NULL) +
     
-    ggplot2::geom_point(ggplot2::aes(x = mt$sp[1], y = mt$se[1]), 
+    ggplot2::geom_point(ggplot2::aes(x = mt_plot$sp[1], y = mt_plot$se[1]), 
                shape = 23, size = summary_size, fill = col_sum, color = col_sum) +
     
-    # Reverse the x-axis so higher specificity is on the left
-    ggplot2::scale_x_reverse(limits = c(1, 0), expand = c(0, 0), breaks = x_breaks) +
+    (if (x_axis == "specificity")
+      ggplot2::scale_x_reverse(limits = c(1, 0), expand = c(0, 0), breaks = x_breaks)
+    else ggplot2::scale_x_continuous(limits = c(0, 1), expand = c(0, 0), breaks = x_breaks)) +
     ggplot2::scale_y_continuous(limits = c(0, 1), expand = c(0, 0), breaks = y_breaks) +
     ggplot2::coord_fixed(ratio = 1) +
     
     # Add axis labels and title
-    ggplot2::labs(x = "Specificity", y = "Sensitivity", 
+    ggplot2::labs(x = if (x_axis == "specificity") "Specificity" else "1 - Specificity", y = "Sensitivity", 
          title = title) +
     ggplot2::theme_classic(base_size = base_size, base_family = font_family) +
     ggplot2::theme(
@@ -258,15 +265,16 @@ plot_metandi <- function(model_obj, digits = 2,
     longest_line <- max(nchar(unlist(strsplit(labels, "\n", fixed = TRUE)), type = "width"))
     # ponytail: text-width approximation keeps the annotation in data coordinates.
     box_width <- max(.20, min(.96, .12 + longest_line * .012 * scale))
-    anchor <- if (is.character(legend_position)) {
+    screen_anchor <- if (is.character(legend_position)) {
       c(if (grepl("right", legend_position)) .98 - box_width else .02,
         if (grepl("top", legend_position)) .98 - box_height else .03)
     } else legend_position
-    if (anchor[1] + box_width > 1 || anchor[2] + box_height > 1 || any(anchor < 0))
+    if (screen_anchor[1] + box_width > 1 || screen_anchor[2] + box_height > 1 || any(screen_anchor < 0))
       stop("Legend does not fit: reduce legend_text_size or move legend_position.", call. = FALSE)
-    x_line <- anchor[1] + .04
-    x_text <- anchor[1] + .08
-    y_current <- anchor[2] + box_height - padding
+    x_coord <- function(x) if (x_axis == "specificity") 1 - x else x
+    x_line <- x_coord(screen_anchor[1] + .04)
+    x_text <- x_coord(screen_anchor[1] + .08)
+    y_current <- screen_anchor[2] + box_height - padding
     y_pos <- lapply(line_count, function(n) {
       y <- y_current - n * line_height / 2
       y_current <<- y_current - n * line_height - gap
@@ -274,8 +282,8 @@ plot_metandi <- function(model_obj, digits = 2,
     })
     
     p <- p +
-      ggplot2::annotate("rect", xmin = anchor[1], xmax = anchor[1] + box_width,
-               ymin = anchor[2], ymax = anchor[2] + box_height,
+      ggplot2::annotate("rect", xmin = x_coord(screen_anchor[1]), xmax = x_coord(screen_anchor[1] + box_width),
+               ymin = screen_anchor[2], ymax = screen_anchor[2] + box_height,
                fill = bg_box, color = "gray80", linewidth = 0.5) +
       
       # Observed study marker

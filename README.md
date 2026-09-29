@@ -247,6 +247,7 @@ plot_sroc(
   digits = 2, auc_digits = 3,
   custom_se = NULL, custom_sp = NULL, custom_auc = NULL,
   x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2),
+  x_axis = "specificity", # 或 "fpr"，显示 1 - Specificity
   output_file = "sroc.png", width = 6, height = 6, dpi = 300
 )
 ```
@@ -259,6 +260,7 @@ plot_sroc(
 `alpha` 范围为 0–1，0 完全透明。刻度参数不改变轴范围。
 `auc_digits = NULL` 时，QMD 沿用 `digits`，其他模型使用 3 位小数。
 `custom_auc = NULL` 自动生成文字；区间未估计时仅显示 AUC 点估计，不显示 NA。
+`x_axis = "specificity"`（默认）显示反向 Specificity 轴；`x_axis = "fpr"` 显示正向 1 - Specificity 轴。两者不改变拟合、AUC 或汇总数值。
 MIDAS 绘图现与其他分支共用渲染函数，也支持这些选项（其默认外观相应统一）。
 
 | 函数 | 用途 |

@@ -18,7 +18,7 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   confidence_col = "#2980B9", confidence_alpha = 0.2,
   prediction_col = "#BDC3C7", prediction_alpha = 0.15,
   auc_digits = NULL, x_breaks = seq(0, 1, 0.2),
-  y_breaks = seq(0, 1, 0.2))
+  y_breaks = seq(0, 1, 0.2), x_axis = c("specificity", "fpr"))
 }
 \arguments{
 \item{fit}{\code{fit_sroc} 返回的拟合对象。}
@@ -53,6 +53,7 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
 \item{prediction_alpha}{预测区域填充透明度，0--1。}
 \item{auc_digits}{AUC 小数位数，0--10 整数；NULL 时 QMD 使用 digits，其他方法使用 3。}
 \item{x_breaks,y_breaks}{横纵轴刻度，0--1 内不重复数值；不改变坐标范围和算法。}
+\item{x_axis}{横坐标：\code{"specificity"}（默认，Specificity 从 1 递减至 0）或 \code{"fpr"}（1 - Specificity 从 0 递增至 1）。只改变显示，不改变模型或 AUC。}
 }
 \details{
 横轴为特异度，由 1 递减到 0；纵轴为灵敏度。

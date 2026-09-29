@@ -1,3 +1,7 @@
+# dtaMetaBridge 1.5.8
+
+- `plot_sroc()` 新增 `x_axis`：`"specificity"`（默认）或 `"fpr"`，分别显示 Specificity 与 1 - Specificity 横轴；图例位置按屏幕坐标定位，不受横轴方向影响。
+
 # dtaMetaBridge 1.5.7
 
 - SROC 图例全部使用常规字重。

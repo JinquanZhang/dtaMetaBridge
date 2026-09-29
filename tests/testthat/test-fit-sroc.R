@@ -54,3 +54,17 @@ test_that("SROC legend box adapts to its text and visible entries", {
   expect_gt(abs(long$xmax - long$xmin), abs(standard$xmax - standard$xmin))
   expect_gt(standard$ymax - standard$ymin, compact$ymax - compact$ymin)
 })
+
+test_that("SROC x axis switches between specificity and FPR", {
+  testthat::skip_if_not_installed("dtametaTMB")
+  d <- data.frame(study = LETTERS[1:6], TP = c(35,42,28,60,45,70),
+    FN = c(15,8,22,20,15,10), TN = c(80,65,90,55,75,60), FP = c(20,35,10,45,25,40))
+  f <- fit_sroc(d, auc_boot = 0)
+  p_sp <- plot_sroc(f, show_legend = FALSE, x_axis = "specificity")
+  p_fpr <- plot_sroc(f, show_legend = FALSE, x_axis = "fpr")
+  expect_identical(p_sp$labels$x, "Specificity")
+  expect_identical(p_fpr$labels$x, "1 - Specificity")
+  b_sp <- ggplot2::ggplot_build(p_sp)
+  b_fpr <- ggplot2::ggplot_build(p_fpr)
+  expect_lt(max(abs(b_fpr$data[[1]]$x - (1 + b_sp$data[[1]]$x))), 1e-12)
+})
