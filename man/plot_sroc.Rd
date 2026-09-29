@@ -59,7 +59,7 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
 默认拟合方法为直接的频率学 Rutter--Gatsonis HSROC。
 full_curve 只改变绘图，不改变汇总估计、AUC 或区域；观察范围外属于模型外推。
 标准方法的 AUC 为完整曲线积分，未估计 AUC 置信区间。
-图例宽度固定，高度随字号变化；框超出面板时报错，过长文字仍可能溢出。
+图例框宽度按最长文字行自适应，高度按文字行数、字号及显示的轮廓条目自适应；框超出面板时报错。
 置信区域描述汇总点不确定性，预测区域描述新研究可能的真实效应，不是曲线置信带。
 }
 \value{可继续用 ggplot2 修改或保存的 ggplot 对象。}

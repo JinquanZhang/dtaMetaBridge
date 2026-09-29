@@ -245,56 +245,52 @@ plot_metandi <- function(model_obj, digits = 2,
   
   # 5. Add legend annotations
   if (show_legend) {
-    x0 <- 0.44       # left edge of the legend box
-    x_text <- 0.38   # label anchor
-    x_line <- 0.42   # line or point anchor
-    # Stack legend entries from bottom to top
-    y_current <- 0.07
-    y_pos <- list()
-    
-    if (show_pred) { y_pos$pred <- y_current; y_current <- y_current + 0.07 }
-    if (show_conf) { y_pos$conf <- y_current; y_current <- y_current + 0.09 }
-    
-    y_pos$sroc <- y_current; y_current <- y_current + 0.11
-    y_pos$sum <- y_current; y_current <- y_current + 0.09
-    y_pos$obs <- y_current
-    
-    # Compute legend box bounds
-    box_ymax <- y_pos$obs + 0.04
-    box_ymin <- 0.03
     scale <- legend_text_size / 3.5
-    box_height <- (box_ymax - box_ymin) * scale
+    labels <- c(obs = "Observed Data", sum = sprintf("Summary Point\n%s\n%s", str_se, str_sp),
+      sroc = sprintf("SROC Curve\n%s", str_auc))
+    if (show_conf) labels <- c(labels, conf = "95% Confidence Contour")
+    if (show_pred) labels <- c(labels, pred = "95% Prediction Contour")
+    line_count <- vapply(strsplit(labels, "\n", fixed = TRUE), length, integer(1))
+    line_height <- .048 * scale
+    gap <- .012 * scale
+    padding <- .025 * scale
+    box_height <- sum(line_count * line_height) + (length(labels) - 1) * gap + 2 * padding
+    longest_line <- max(nchar(unlist(strsplit(labels, "\n", fixed = TRUE)), type = "width"))
+    # ponytail: text-width approximation keeps the annotation in data coordinates.
+    box_width <- max(.20, min(.96, .12 + longest_line * .012 * scale))
     anchor <- if (is.character(legend_position)) {
-      c(if (grepl("right", legend_position)) .54 else .02,
+      c(if (grepl("right", legend_position)) .98 - box_width else .02,
         if (grepl("top", legend_position)) .98 - box_height else .03)
     } else legend_position
-    if (anchor[1] + .44 > 1 || anchor[2] + box_height > 1 || any(anchor < 0))
+    if (anchor[1] + box_width > 1 || anchor[2] + box_height > 1 || any(anchor < 0))
       stop("Legend does not fit: reduce legend_text_size or move legend_position.", call. = FALSE)
-    dx <- .54 - anchor[1]
-    x0 <- x0 + dx
-    x_text <- x_text + dx
-    x_line <- x_line + dx
-    y_pos <- lapply(y_pos, function(y) anchor[2] + (y - .03) * scale)
-    box_ymin <- anchor[2]
-    box_ymax <- anchor[2] + box_height
+    x_line <- anchor[1] + .04
+    x_text <- anchor[1] + .08
+    y_current <- anchor[2] + box_height - padding
+    y_pos <- lapply(line_count, function(n) {
+      y <- y_current - n * line_height / 2
+      y_current <<- y_current - n * line_height - gap
+      y
+    })
     
     p <- p +
-      ggplot2::annotate("rect", xmin = x0+0.02, xmax = 0.02 + dx, ymin = box_ymin, ymax = box_ymax,
+      ggplot2::annotate("rect", xmin = anchor[1], xmax = anchor[1] + box_width,
+               ymin = anchor[2], ymax = anchor[2] + box_height,
                fill = bg_box, color = "gray80", linewidth = 0.5) +
       
       # Observed study marker
       ggplot2::annotate("point", x = x_line, y = y_pos$obs, shape = 21, size = study_size, color = col_obs, fill = "white", stroke = 1.2) +
-      ggplot2::annotate("text", x = x_text, y = y_pos$obs, label = "Observed Data", hjust = 0, size = legend_text_size * 4 / 3.5, family = font_family, fontface = "bold") +
+      ggplot2::annotate("text", x = x_text, y = y_pos$obs, label = labels[["obs"]], hjust = 0, size = legend_text_size * 4 / 3.5, family = font_family, fontface = "bold") +
       
       ggplot2::annotate("point", x = x_line, y = y_pos$sum, shape = 23, size = summary_size, color = col_sum, fill = col_sum) +
       ggplot2::annotate("text", x = x_text, y = y_pos$sum, 
-               label = sprintf("Summary Point\n%s\n%s", str_se, str_sp), 
+               label = labels[["sum"]], 
                hjust = 0, size = legend_text_size, family = font_family, lineheight = 1.1) +
       
       ggplot2::annotate("segment", x = x_line+0.02, xend = x_line-0.02, y = y_pos$sroc, yend = y_pos$sroc, 
                color = col_sroc, linewidth = sroc_linewidth) +
       ggplot2::annotate("text", x = x_text, y = y_pos$sroc, 
-               label = sprintf("SROC Curve\n%s", str_auc), 
+               label = labels[["sroc"]], 
                hjust = 0, size = legend_text_size, family = font_family, lineheight = 1.1)
     
     # Add contour labels if requested
@@ -302,14 +298,14 @@ plot_metandi <- function(model_obj, digits = 2,
       p <- p + 
         ggplot2::annotate("segment", x = x_line+0.02, xend = x_line-0.02, y = y_pos$conf, yend = y_pos$conf, 
                  color = col_conf, linewidth = 0.8, linetype = "dashed") +
-        ggplot2::annotate("text", x = x_text, y = y_pos$conf, label = "95% Confidence Contour", hjust = 0, size = legend_text_size, family = font_family)
+        ggplot2::annotate("text", x = x_text, y = y_pos$conf, label = labels[["conf"]], hjust = 0, size = legend_text_size, family = font_family)
     }
     
     if (show_pred) {
       p <- p + 
         ggplot2::annotate("segment", x = x_line+0.02, xend = x_line-0.02, y = y_pos$pred, yend = y_pos$pred, 
                  color = col_pred, linewidth = 0.8, linetype = "dotted") +
-        ggplot2::annotate("text", x = x_text, y = y_pos$pred, label = "95% Prediction Contour", hjust = 0, size = legend_text_size, family = font_family)
+        ggplot2::annotate("text", x = x_text, y = y_pos$pred, label = labels[["pred"]], hjust = 0, size = legend_text_size, family = font_family)
     }
   }
   

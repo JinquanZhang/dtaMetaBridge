@@ -41,3 +41,16 @@ test_that("direct Rutter-Gatsonis fit retains rows, zero cells and original coun
   expect_error(fit_sroc(d, n_grid=NA_real_), "n_grid")
   expect_error(fit_sroc(d, conf_level=1), "conf_level")
 })
+
+test_that("SROC legend box adapts to its text and visible entries", {
+  testthat::skip_if_not_installed("dtametaTMB")
+  d <- data.frame(study = LETTERS[1:6], TP = c(35,42,28,60,45,70),
+    FN = c(15,8,22,20,15,10), TN = c(80,65,90,55,75,60), FP = c(20,35,10,45,25,40))
+  f <- fit_sroc(d, auc_boot = 0)
+  rect <- function(p) Filter(function(x) "xmin" %in% names(x), ggplot2::ggplot_build(p)$data)[[1]]
+  standard <- rect(plot_sroc(f))
+  long <- rect(plot_sroc(f, custom_auc = "AUC with a deliberately much longer explanatory label for sizing"))
+  compact <- rect(plot_sroc(f, show_confidence = FALSE, show_prediction = FALSE))
+  expect_gt(abs(long$xmax - long$xmin), abs(standard$xmax - standard$xmin))
+  expect_gt(standard$ymax - standard$ymin, compact$ymax - compact$ymin)
+})
