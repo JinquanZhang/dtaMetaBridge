@@ -120,7 +120,8 @@ plot_metandi <- function(model_obj, digits = 2,
                          legend_bg = "#F8F9FA", font_family = "sans", base_size = 14,
                          title = "SROC with Prediction & Confidence Contours",
                          show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
-                         study_col = "#7F8C8D", summary_size = 4.5, summary_col = "#C0392B",
+                         study_col = "#7F8C8D", study_label_col = "black",
+                         summary_size = 4.5, summary_col = "#C0392B",
                          sroc_col = "#2C3E50", sroc_linewidth = 1.2,
                          confidence_col = "#2980B9", confidence_alpha = .2,
                          prediction_col = "#BDC3C7", prediction_alpha = .15,
@@ -147,7 +148,7 @@ plot_metandi <- function(model_obj, digits = 2,
     if (!is.numeric(value) || length(value) != 1L || !is.finite(value) || value < 0 || value > 1)
       stop(name, " must be between 0 and 1.", call. = FALSE)
   }
-  for (name in c("legend_bg", "study_col", "summary_col", "sroc_col", "confidence_col", "prediction_col")) {
+  for (name in c("legend_bg", "study_col", "study_label_col", "summary_col", "sroc_col", "confidence_col", "prediction_col")) {
     value <- get(name)
     if (!is.character(value) || length(value) != 1L || is.na(value) ||
         inherits(try(grDevices::col2rgb(value), silent = TRUE), "try-error"))
@@ -195,28 +196,30 @@ plot_metandi <- function(model_obj, digits = 2,
   # 4. Build the SROC plot
   p <- ggplot2::ggplot()
   
-  # 4.1 Prediction contour
+  # 4.1 Observed studies are beneath contours and the SROC curve.
+  p <- p + ggplot2::geom_point(data = pd$study_df, ggplot2::aes(x = sp, y = se),
+    shape = 21, size = study_size, fill = ggplot2::alpha("white", 0.6),
+    color = col_obs, stroke = 1.2)
+
+  # 4.2 Prediction contour
   if (show_pred) {
     p <- p + 
       ggplot2::geom_polygon(data = pd$pred_df, ggplot2::aes(x = sp, y = se), fill = col_pred, alpha = prediction_alpha) +
       ggplot2::geom_path(data = pd$pred_df, ggplot2::aes(x = sp, y = se), color = col_pred, linetype = "dotted", linewidth = 0.8)
   }
   
-  # 4.2 Confidence contour
+  # 4.3 Confidence contour
   if (show_conf) {
     p <- p + 
       ggplot2::geom_polygon(data = pd$conf_df, ggplot2::aes(x = sp, y = se), fill = col_conf, alpha = confidence_alpha) +
       ggplot2::geom_path(data = pd$conf_df, ggplot2::aes(x = sp, y = se), color = col_conf, linetype = "dashed", linewidth = 0.8)
   }
   
-  # 4.3 SROC curve, observed studies, and summary point
+  # 4.4 SROC curve, labels, and summary point
   p <- p +
     ggplot2::geom_line(data = pd$sroc_df, ggplot2::aes(x = sp, y = se), color = col_sroc, linewidth = sroc_linewidth) +
-    
-    ggplot2::geom_point(data = pd$study_df, ggplot2::aes(x = sp, y = se), 
-               shape = 21, size = study_size, fill = ggplot2::alpha("white", 0.6), color = col_obs, stroke = 1.2) +
     (if (show_study_labels) ggplot2::geom_text(data = pd$study_df, ggplot2::aes(x = sp, y = se, label = study_id),
-              size = study_label_size, family = font_family, color = col_obs) else NULL) +
+              size = study_label_size, family = font_family, color = study_label_col) else NULL) +
     
     ggplot2::geom_point(ggplot2::aes(x = mt$sp[1], y = mt$se[1]), 
                shape = 23, size = summary_size, fill = col_sum, color = col_sum) +

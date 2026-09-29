@@ -12,7 +12,8 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   legend_bg = "#F8F9FA", font_family = "sans", base_size = 14,
   title = "SROC with Prediction & Confidence Contours",
   show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
-  study_col = "#7F8C8D", summary_size = 4.5, summary_col = "#C0392B",
+  study_col = "#7F8C8D", study_label_col = "black",
+  summary_size = 4.5, summary_col = "#C0392B",
   sroc_col = "#2C3E50", sroc_linewidth = 1.2,
   confidence_col = "#2980B9", confidence_alpha = 0.2,
   prediction_col = "#BDC3C7", prediction_alpha = 0.15,
@@ -40,7 +41,8 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
 \item{show_study_labels}{是否在研究圆点内显示编号。}
 \item{study_size}{研究点大小，毫米。}
 \item{study_label_size}{研究编号字号，毫米。}
-\item{study_col}{研究圈边缘与研究编号颜色。}
+\item{study_col}{研究圈边缘颜色。研究圈绘制在预测/置信轮廓和 SROC 曲线下方。}
+\item{study_label_col}{研究编号颜色，默认黑色。}
 \item{summary_size}{汇总点大小，毫米；汇总点固定为 45° 旋转正方形（菱形）。}
 \item{summary_col}{汇总点颜色。}
 \item{sroc_col}{仅 SROC 曲线颜色。}

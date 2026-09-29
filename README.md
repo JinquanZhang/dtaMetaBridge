@@ -238,7 +238,8 @@ plot_sroc(
   font_family = "sans", base_size = 14,
   title = "SROC with Prediction & Confidence Contours", # NULL 隐藏标题
   show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
-  study_col = "#7F8C8D", # 研究圈边缘和编号颜色
+  study_col = "#7F8C8D", # 研究圈边缘颜色；绘制在线条下方
+  study_label_col = "black", # 研究编号颜色
   summary_size = 4.5, summary_col = "#C0392B", # 汇总点为菱形
   sroc_col = "#2C3E50", sroc_linewidth = 1.2,
   confidence_col = "#2980B9", confidence_alpha = .2,

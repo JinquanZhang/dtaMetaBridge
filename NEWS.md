@@ -1,3 +1,7 @@
+# dtaMetaBridge 1.5.4
+
+- SROC 研究圈移至预测/置信轮廓及曲线下方，避免遮挡线条；新增 `study_label_col`，默认研究编号为黑色。
+
 # dtaMetaBridge 1.5.3
 
 - `plot_sroc()` 的汇总点改为 45° 旋转正方形（菱形）；新增 `study_col` 控制研究圈及编号颜色，`sroc_col` 仅控制 SROC 曲线颜色。
