@@ -284,13 +284,13 @@ plot_metandi <- function(model_obj, digits = 2,
       
       ggplot2::annotate("point", x = x_line, y = y_pos$sum, shape = 23, size = summary_size, color = col_sum, fill = col_sum) +
       ggplot2::annotate("text", x = x_text, y = y_pos$sum, 
-               label = labels[["sum"]], 
+               label = labels[["sum"]],
                hjust = 0, size = legend_text_size, family = font_family, lineheight = 1.1) +
       
       ggplot2::annotate("segment", x = x_line+0.02, xend = x_line-0.02, y = y_pos$sroc, yend = y_pos$sroc, 
                color = col_sroc, linewidth = sroc_linewidth) +
       ggplot2::annotate("text", x = x_text, y = y_pos$sroc, 
-               label = labels[["sroc"]], 
+               label = labels[["sroc"]],
                hjust = 0, size = legend_text_size, family = font_family, lineheight = 1.1)
     
     # Add contour labels if requested
