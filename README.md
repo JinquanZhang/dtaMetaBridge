@@ -145,20 +145,6 @@ posttest_probability(fit_freq, prevalence = c(.10, .30, .50),
 
 返回每个检验前概率下的汇总灵敏度、特异度、PPV、NPV 及模拟 95% 区间。阴性后的患病概率是 `1 - npv`。区间只反映汇总准确性的不确定性，不含检验前概率不确定性，也不是新研究预测区间。
 
-## 方法与适用边界
-
-频率学模型直接拟合 Rutter–Gatsonis 层级模型：
-
-$$
-\mathrm{logit}(Se) =
-\Lambda e^{-\beta/2} -
-e^{-\beta}\mathrm{logit}(Sp).
-$$
-
-AUC 是该曲线在 FPR 0–1 的积分，不是单项研究连续评分 ROC 的 AUC。频率学 AUC 的 Bootstrap 每次均按研究重抽样并重新拟合模型。
-
-同一受试者群体的多个阈值不能被当作独立研究传给 `fit_sroc()`；请使用多阈值模型（如 `dtametaTMB::fitHoyer()` 或 `diagmeta`）处理阈值间相关性。少量研究、稀疏数据或方差边界时，应检查收敛并进行敏感性分析。
-
 ## 引用
 
 - Rutter CM, Gatsonis CA. A hierarchical regression approach to meta-analysis of diagnostic test accuracy evaluations. *Statistics in Medicine*. 2001;20:2865–2884. doi:10.1002/sim.942.
