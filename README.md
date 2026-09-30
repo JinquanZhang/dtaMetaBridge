@@ -20,8 +20,6 @@ remotes::install_github("JinquanZhang/dtaMetaBridge")
 library(dtaMetaBridge)
 ```
 
-`dtametaTMB`、`meta4diag` 和 `INLA` 已列为安装依赖；使用上述命令安装本包时会一并解析下载。INLA 使用其官方稳定仓库；若网络或单位镜像限制该仓库，请先配置可访问该地址的 R 软件源后重试。
-
 ## 基本工作流
 
 每行必须是一项相互独立的研究，且含有研究名、TP、FP、FN、TN；四格表为非负整数，每项研究都必须至少包含一名患病与一名非患病受试者。
@@ -43,7 +41,7 @@ fit_fast <- fit_sroc(dta, year_col = "year", auc_boot = 0)
 
 | 后端 | 区间 | SROC 类型 |
 | --- | --- | --- |
-| `"frequency"`（默认） | Se/Sp：Wald 95% CI；AUC：研究层 Bootstrap 95% CI。 | 仅类型 5，即原生 Rutter–Gatsonis。 |
+| `"frequency"`（默认） | Se/Sp：Wald 95% CI；AUC：研究层 Bootstrap 95% CI。 | Rutter–Gatsonis。 |
 | `"bayes"` | 后验 95% CrI。 | 可用类型 1–5。 |
 
 ```r
@@ -104,8 +102,6 @@ meta_sens <- metaprop(TP, TP + FN, studlab = study, data = dta,
 meta_spec <- metaprop(TN, TN + FP, studlab = study, data = dta,
                       method = "GLMM", method.tau = "ML")
 
-dta_recovered <- dta_from_meta(meta_sens, meta_spec)
-fit <- fit_sroc(dta_recovered, auc_boot = 2000)
 ```
 
 ```r
@@ -124,7 +120,7 @@ plot_sensspec_forest_meta(
 
 ![双森林图示例：灵敏度与特异度的随机效应汇总、权重方块及异质性信息。](inst/figures/forest-current.png)
 
-森林图菱形来自相应 `meta` 对象的随机效应汇总值。方块面积按各面板的 `w.random` 权重缩放；CI 横线与点估计短竖线位于方块上层。研究行区间为 Clopper–Pearson 精确二项区间，因此可能与 `meta` 对象所选的区间算法不同。
+森林图菱形来自相应 `meta` 对象的随机效应汇总值。方块面积按各面板的 `w.random` 权重缩放；CI 横线与点估计短竖线位于方块上层。
 
 也可直接传入四格表：
 
