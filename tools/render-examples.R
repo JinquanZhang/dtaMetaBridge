@@ -5,7 +5,8 @@ dta <- data.frame(study = c("Parcha 2021", "Tada 2021", "Forsyth 2021", "Reddy 2
   FN = c(122,113,39,222,27,123,140,8,9), TN = c(350,173,11,99,21,214,116,126,85))
 sens <- meta::metaprop(TP, TP + FN, studlab = study, data = dta, method = "GLMM", method.tau = "ML")
 spec <- meta::metaprop(TN, TN + FP, studlab = study, data = dta, method = "GLMM", method.tau = "ML")
-fit <- fit_bivariate_meta(sens, spec)
+fit <- fit_sroc(dta, backend = "frequency", auc_boot = 2000)
 plot_sensspec_forest_meta(sens, spec, output_file = "inst/figures/forest-example.png")
-plot_sroc(fit, output_file = "inst/figures/sroc-example.png", width = 6, height = 6)
+plot_sroc(fit, output_file = "inst/figures/sroc-example.png", width = 6, height = 6,
+  full_curve = TRUE)
 print(fit$metrics)

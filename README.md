@@ -82,6 +82,8 @@ plot_sroc(
 )
 ```
 
+![SROC 示例图：Rutter–Gatsonis 频率学拟合、95% 置信与预测轮廓。](inst/figures/sroc-example.png)
+
 - 汇总点为菱形；研究圈在轮廓与 SROC 曲线下方，研究编号默认黑色。
 - `x_axis = "specificity"`（默认）显示从 1 到 0 的特异度；`x_axis = "fpr"` 显示从 0 到 1 的 `1 - Specificity`。
 - `full_curve = FALSE` 只显示观察到的 FPR 范围；`TRUE` 显示 FPR 0–1 的模型外推曲线。它们不改变拟合、AUC 或汇总估计。
@@ -135,6 +137,8 @@ plot_sensspec_forest_meta(
 )
 ```
 
+![双森林图示例：灵敏度与特异度的随机效应汇总、权重方块及异质性信息。](inst/figures/forest-example.png)
+
 森林图菱形来自相应 `meta` 对象的随机效应汇总值。方块面积按各面板的 `w.random` 权重缩放；CI 横线与点估计短竖线位于方块上层。研究行区间为 Clopper–Pearson 精确二项区间，因此可能与 `meta` 对象所选的区间算法不同。
 
 也可直接传入四格表：
@@ -158,9 +162,11 @@ posttest_probability(fit_freq, prevalence = c(.10, .30, .50),
 
 频率学模型直接拟合 Rutter–Gatsonis 层级模型：
 
-\[
-\operatorname{logit}(Se) = \Lambda\exp(-\beta/2) - \exp(-\beta)\operatorname{logit}(Sp).
-\]
+$$
+\operatorname{logit}(Se) =
+\Lambda \exp(-\beta/2) -
+\exp(-\beta)\operatorname{logit}(Sp).
+$$
 
 AUC 是该曲线在 FPR 0–1 的积分，不是单项研究连续评分 ROC 的 AUC。频率学 AUC 的 Bootstrap 每次均按研究重抽样并重新拟合模型。
 
