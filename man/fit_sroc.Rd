@@ -31,6 +31,8 @@ fit_sroc(data, backend = c("frequency", "bayes"), sroc_type = 5L,
 \code{model}、\code{metrics}（灵敏度、特异度、AUC、部分 AUC 及区间）、
 \code{plot_data}、\code{curve_parameters} 和 \code{random_effects}。
 频率学区间为 Wald/Delta 或 Bootstrap 置信区间；贝叶斯区间为后验可信区间。
+区间水平由 \code{conf_level} 决定，并保存在 \code{conf_level} 和
+\code{interval_type} 元素中。
 }
 \details{
 频率学后端直接调用 \code{dtametaTMB::fitRutterGatsonis()}。其曲线为

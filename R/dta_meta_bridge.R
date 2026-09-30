@@ -273,78 +273,11 @@ plot_sensspec_forest_meta <- function(sensitivity_meta, specificity_meta = NULL,
   invisible(output_file)
 }
 
-#' Fit a bivariate diagnostic model and generate SROC plot data.
-#'
-#' By default, the SROC uses Reitsma REML and the Rutter-Gatsonis curve. The
-#' conditional-mean ("naive") curve is available explicitly, but can run in a
-#' non-ROC direction when the study-level covariance is negative.
-fit_bivariate_dta <- function(data, study_col = "study", correction = 0.5, correction_control = c("single", "all", "none"), method = c("reml", "ml", "fixed"), sroc_type = c("ruttergatsonis", "qmd", "midas", "naive"), n_grid = 1000, seed = 2026, n_mc = 3000) {
-  .assert_dta_data(data, study_col)
-  if (nrow(data) < 3) stop("At least three studies are required for the bivariate model.", call. = FALSE)
-  sroc_type <- match.arg(sroc_type)
-  if (sroc_type == "qmd") {
-    if (!missing(method) || !missing(correction) || !missing(correction_control)) stop("method and correction arguments apply only to mada backends.", call. = FALSE)
-    standardized <- data.frame(Study = data[[study_col]], data[, c("TP", "FP", "FN", "TN")])
-    result <- fit_metandi(standardized, seed = seed, n_mc = n_mc, n_grid = n_grid)
-    result$backend <- "qmd"
-    result$model_type <- "Original QMD fit_metandi"
-    result$metrics$sensitivity <- result$metrics$se
-    result$metrics$specificity <- result$metrics$sp
-    return(result)
-  }
-  if (sroc_type == "midas") {
-    if (!missing(method) || !missing(correction) || !missing(correction_control)) stop("method and continuity-correction arguments apply only to the mada backends; omit them for midas.", call. = FALSE)
-    return(.fit_midas(data, study_col, n_grid))
-  }
-  correction_control <- match.arg(correction_control)
-  method <- match.arg(method)
-  if (!is.numeric(correction) || length(correction) != 1 || correction < 0) stop("correction must be a single non-negative number.", call. = FALSE)
-  if (n_grid < 100) stop("n_grid must be at least 100.", call. = FALSE)
-  standardized <- data.frame(study = as.character(data[[study_col]]), TP = data$TP, FP = data$FP, FN = data$FN, TN = data$TN)
-  fit <- mada::reitsma(standardized, TP = "TP", FN = "FN", FP = "FP", TN = "TN", correction = correction, correction.control = correction_control, method = method)
-  mu <- stats::coef(fit)["(Intercept)", ]
-  fixed_vcov <- as.matrix(stats::vcov(fit))
-  z <- stats::qnorm(.975)
-  se_fixed <- sqrt(diag(fixed_vcov))
-  sensitivity <- c(est = unname(stats::plogis(mu[1])), lwr = unname(stats::plogis(mu[1] - z * se_fixed[1])), upr = unname(stats::plogis(mu[1] + z * se_fixed[1])))
-  specificity <- c(est = unname(1 - stats::plogis(mu[2])), lwr = unname(1 - stats::plogis(mu[2] + z * se_fixed[2])), upr = unname(1 - stats::plogis(mu[2] - z * se_fixed[2])))
-  to_roc_ellipse <- function(covariance) {
-    points <- ellipse::ellipse(covariance, centre = mu, level = .95)
-    data.frame(sp = 1 - stats::plogis(points[, 2]), se = stats::plogis(points[, 1]))
-  }
-  if (any(!is.finite(fit$Psi)) || any(diag(fit$Psi) <= 0)) stop("SROC requires positive between-study variances; inspect the fitted model or use a different model.", call. = FALSE)
-  observed_fpr <- standardized$FP / (standardized$FP + standardized$TN)
-  display_fpr_grid <- seq(max(.001, min(observed_fpr)), min(.999, max(observed_fpr)), length.out = n_grid)
-  standard_sroc <- mada::sroc(fit, fpr = display_fpr_grid, type = sroc_type)
-  curve_function <- mada::sroc(fit, type = sroc_type, return_function = TRUE)
-  auc <- stats::integrate(curve_function, lower = 0, upper = 1, rel.tol = 1e-8)$value
-  observed_range <- range(observed_fpr)
-  pauc <- if (diff(observed_range) == 0) 0 else stats::integrate(curve_function, observed_range[1], observed_range[2], rel.tol = 1e-8)$value
-  list(
-    model = fit,
-    model_type = paste("mada::reitsma", sroc_type, "SROC"),
-    backend = "mada",
-    metrics = list(
-      sensitivity = sensitivity,
-      specificity = specificity,
-      auc = c(est = auc, lwr = NA_real_, upr = NA_real_),
-      pauc = pauc
-    ),
-    plot_data = list(confidence = to_roc_ellipse(fixed_vcov), prediction = to_roc_ellipse(fixed_vcov + fit$Psi), sroc = data.frame(sp = 1 - standard_sroc[, 1], se = standard_sroc[, 2]), studies = data.frame(Study = standardized$study, specificity = data$TN / (data$TN + data$FP), sensitivity = data$TP / (data$TP + data$FN))),
-    random_effects = list(covariance = fit$Psi)
-  )
-}
-
-#' Fit the bivariate SROC model directly from a sensitivity/specificity metaprop pair.
-fit_bivariate_meta <- function(sensitivity_meta, specificity_meta, ...) {
-  fit_bivariate_dta(dta_from_meta(sensitivity_meta, specificity_meta), ...)
-}
-
 #' Plot an SROC curve with confidence and prediction contours.
 #'
 #' @return A ggplot object, invisibly saved to output_file when supplied.
 plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, output_file = NULL,
-  width = 6, height = 5, dpi = 300, ..., full_curve = FALSE,
+  width = 6, height = 5, dpi = 300, full_curve = FALSE,
   show_legend = TRUE, digits = 2, custom_se = NULL, custom_sp = NULL, custom_auc = NULL,
   legend_position = "bottomright", legend_text_size = 3.5, legend_bg = "#F8F9FA",
   font_family = "sans", base_size = 14, title = "SROC with Prediction & Confidence Contours",
@@ -355,7 +288,6 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
   prediction_col = "#BDC3C7", prediction_alpha = .15,
   auc_digits = NULL, x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2),
   x_axis = c("specificity", "fpr")) {
-  if (length(list(...))) stop("Unknown plot_sroc arguments: ", paste(names(list(...)), collapse = ", "), call. = FALSE)
   if (!is.logical(full_curve) || length(full_curve) != 1L || is.na(full_curve))
     stop("full_curve must be TRUE or FALSE.", call. = FALSE)
   x_axis <- match.arg(x_axis)
@@ -372,12 +304,13 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
     else .sroc_values(fpr, fit$curve_parameters$mu, fit$curve_parameters$slope)
     pd$sroc <- data.frame(sp = 1 - fpr, se = se)
   }
+  contour_label <- paste0(sprintf("%g%%", 100 * fit$conf_level), " ")
   # ponytail: share one renderer across the two supported fit_sroc backends.
   adapted <- list(metrics = list(se = fit$metrics$sensitivity, sp = fit$metrics$specificity, auc = fit$metrics$auc),
     plot_data = list(conf_df = pd$confidence, pred_df = pd$prediction, sroc_df = pd$sroc,
       study_df = data.frame(Study = pd$studies$Study, study_id = seq_len(nrow(pd$studies)),
         se = pd$studies$sensitivity, sp = pd$studies$specificity)))
-  p <- plot_metandi(adapted, digits = digits, show_conf = show_confidence, show_pred = show_prediction,
+  p <- .render_sroc(adapted, digits = digits, show_conf = show_confidence, show_pred = show_prediction,
     show_legend = show_legend, custom_se = custom_se, custom_sp = custom_sp, custom_auc = custom_auc,
     legend_position = legend_position, legend_text_size = legend_text_size, legend_bg = legend_bg,
     font_family = font_family, base_size = base_size, title = title,
@@ -387,6 +320,7 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
     confidence_col = confidence_col, confidence_alpha = confidence_alpha,
     prediction_col = prediction_col, prediction_alpha = prediction_alpha,
     auc_digits = auc_digits, x_breaks = x_breaks, y_breaks = y_breaks, x_axis = x_axis,
+    contour_label = contour_label,
     output_file = output_file, plot_width = width, plot_height = height)
   if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
   p

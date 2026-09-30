@@ -81,3 +81,29 @@ test_that("SROC x axis switches between specificity and FPR", {
   b_fpr <- ggplot2::ggplot_build(p_fpr)
   expect_lt(max(abs(b_fpr$data[[1]]$x - (1 + b_sp$data[[1]]$x))), 1e-12)
 })
+
+test_that("SROC plot structure keeps study points beneath contours and labels the fitted level", {
+  testthat::skip_if_not_installed("dtametaTMB")
+  d <- data.frame(study = LETTERS[1:6], TP = c(35,42,28,60,45,70),
+    FN = c(15,8,22,20,15,10), TN = c(80,65,90,55,75,60), FP = c(20,35,10,45,25,40))
+  f <- fit_sroc(d, conf_level = .90, auc_boot = 0)
+  b <- ggplot2::ggplot_build(plot_sroc(f))
+  expect_identical(b$data[[1]]$shape[1], 21)
+  expect_identical(b$data[[2]]$fill[1], "#BDC3C7")
+  labels <- unlist(lapply(b$data, function(x) if ("label" %in% names(x)) x$label else character()))
+  expect_true(any(grepl("90% Confidence Contour", labels, fixed = TRUE)))
+  expect_true(any(grepl("90% Prediction Contour", labels, fixed = TRUE)))
+})
+
+test_that("Bayesian type-5 curve and AUC agree with the fitted meta4diag object", {
+  testthat::skip_if_not_installed("meta4diag")
+  testthat::skip_if_not_installed("INLA")
+  d <- data.frame(study = LETTERS[1:6], TP = c(35,42,28,60,45,70),
+    FN = c(15,8,22,20,15,10), TN = c(80,65,90,55,75,60), FP = c(20,35,10,45,25,40))
+  f <- fit_sroc(d, backend = "bayes", sroc_type = 5, posterior_samples = 100, seed = 2026)
+  x <- 1 - f$plot_data$sroc$sp
+  expected_curve <- .sroc_values(x, f$curve_parameters$mu, f$curve_parameters$slope)
+  expect_equal(f$plot_data$sroc$se, expected_curve, tolerance = 1e-12)
+  reference_auc <- meta4diag::AUC(f$model, sroc.type = 5, est.type = "mean")
+  expect_equal(unname(f$metrics$auc["est"]), unname(reference_auc["est"]), tolerance = 1e-12)
+})

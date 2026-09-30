@@ -1,8 +1,7 @@
-# Extracted from HFphf_meta analysis.qmd: fit_metandi and plot_metandi.
-# Changes: namespace qualification and base pipe only; original statistical formulas retained.
-# ponytail: declare data-mask column names for package checks, without changing formulas.
+# Internal SROC renderer. The retired historical fitter is not part of the package API.
+# ponytail: declare data-mask column names used by the retained renderer.
 utils::globalVariables(c("TP", "FP", "FN", "TN", "cell", "status", "count", "Study", "sp", "se", "study_id"))
-fit_metandi <- function(data, seed = 2026, n_mc = 3000, n_grid = 1000) {
+.retired_qmd_fit <- function(data, seed = 2026, n_mc = 3000, n_grid = 1000) {
   required_cols <- c("TP", "FP", "FN", "TN")
   if (!all(required_cols %in% names(data))) {
     stop("Input data must contain columns: TP, FP, FN, TN.")
@@ -14,7 +13,7 @@ fit_metandi <- function(data, seed = 2026, n_mc = 3000, n_grid = 1000) {
     TRUE ~ NA_character_
   )
   if (is.na(study_col)) {
-    stop("Input data must contain a study label column named `Study` or `study`.")
+    stop("Input data must contain a study label column named Study or study.")
   }
 
   data_std <- data |>
@@ -110,7 +109,7 @@ fit_metandi <- function(data, seed = 2026, n_mc = 3000, n_grid = 1000) {
   list(metrics = res, plot_data = plot_data, model = glmm_fit)
 }
 
-plot_metandi <- function(model_obj, digits = 2,
+.render_sroc <- function(model_obj, digits = 2,
                          show_conf = TRUE,       # show the confidence contour
                          show_pred = TRUE,       # show the prediction contour
                          show_legend = TRUE,     # show the plot legend
@@ -126,7 +125,8 @@ plot_metandi <- function(model_obj, digits = 2,
                          confidence_col = "#2980B9", confidence_alpha = .2,
                          prediction_col = "#BDC3C7", prediction_alpha = .15,
                          auc_digits = digits, x_breaks = seq(0, 1, .2),
-                         y_breaks = seq(0, 1, .2), x_axis = c("specificity", "fpr"),
+                          y_breaks = seq(0, 1, .2), x_axis = c("specificity", "fpr"),
+                          contour_label = "95% ",
                          output_file = NULL, plot_width = 6, plot_height = 5) {
   x_axis <- match.arg(x_axis)
   for (name in c("show_conf", "show_pred", "show_legend", "show_study_labels")) {
@@ -255,8 +255,8 @@ plot_metandi <- function(model_obj, digits = 2,
   if (show_legend) {
     labels <- c(obs = "Observed Data", sum = sprintf("Summary Point\n%s\n%s", str_se, str_sp),
       sroc = sprintf("SROC Curve\n%s", str_auc))
-    if (show_conf) labels <- c(labels, conf = "95% Confidence Contour")
-    if (show_pred) labels <- c(labels, pred = "95% Prediction Contour")
+     if (show_conf) labels <- c(labels, conf = paste0(contour_label, "Confidence Contour"))
+     if (show_pred) labels <- c(labels, pred = paste0(contour_label, "Prediction Contour"))
     line_count <- vapply(strsplit(labels, "\n", fixed = TRUE), length, integer(1))
     label_size <- rep(legend_text_size, length(labels)); names(label_size) <- names(labels)
     label_size["obs"] <- legend_text_size * 4 / 3.5

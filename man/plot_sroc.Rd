@@ -7,7 +7,7 @@ SROC 曲线、95\% 置信轮廓和 95\% 预测轮廓。
 }
 \usage{
 plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
-  output_file = NULL, width = 6, height = 5, dpi = 300, ...,
+  output_file = NULL, width = 6, height = 5, dpi = 300,
   full_curve = FALSE, show_legend = TRUE, digits = 2,
   custom_se = NULL, custom_sp = NULL, custom_auc = NULL,
   legend_position = "bottomright", legend_text_size = 3.5,
@@ -27,7 +27,6 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   \item{show_confidence,show_prediction}{是否显示相应的 95\% 轮廓。}
   \item{output_file}{可选输出文件路径；为空时返回 \code{ggplot} 对象。}
   \item{width,height,dpi}{导出图像的英寸宽、高与分辨率。}
-  \item{...}{传给 \code{ggplot2::ggsave()} 的额外参数。}
   \item{full_curve}{是否外推并显示完整 FPR 0--1 的 SROC。默认仅显示
   数据支持范围，避免把外推部分误解为观测证据。}
   \item{show_legend,digits}{是否显示图例及汇总指标的小数位数。}
@@ -46,7 +45,9 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
 \value{一个 \code{ggplot} 对象；若指定 \code{output_file}，同时保存图像。}
 \details{
 频率学结果的 AUC 区间来自 \code{fit_sroc()} 的 Bootstrap；贝叶斯结果使用后验
-可信区间。图例框会按实际文字宽度和字号测量后自适应布局；若输出画布过小，
+可信区间。预测轮廓描述未来研究的潜在真实准确性变异，不包括新研究有限样本的
+二项抽样误差。图例中的轮廓水平继承 \code{fit_sroc()} 的 \code{conf_level}。
+图例框会按实际文字宽度和字号测量后自适应布局；若输出画布过小，
 函数会报错而不截断文字。研究点为未调整的单研究灵敏度和特异度，轮廓反映模型
 中的汇总点不确定性及研究间变异。
 }
