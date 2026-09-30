@@ -41,10 +41,10 @@ fit_fast <- fit_sroc(dta, year_col = "year", auc_boot = 0)
 
 ## SROC 模型
 
-| 后端 | 调用 | 区间 | SROC 类型 |
-| --- | --- | --- | --- |
-| `"frequency"`（默认） | `dtametaTMB::fitRutterGatsonis()` | Se/Sp：Wald 95% CI；AUC：研究层 Bootstrap 95% CI。 | 仅类型 5，即原生 Rutter–Gatsonis。 |
-| `"bayes"` | `meta4diag::meta4diag()` | 后验 95% CrI。 | 可用类型 1–5。 |
+| 后端 | 区间 | SROC 类型 |
+| --- | --- | --- |
+| `"frequency"`（默认） | Se/Sp：Wald 95% CI；AUC：研究层 Bootstrap 95% CI。 | 仅类型 5，即原生 Rutter–Gatsonis。 |
+| `"bayes"` | 后验 95% CrI。 | 可用类型 1–5。 |
 
 ```r
 fit_freq <- fit_sroc(dta, backend = "frequency", year_col = "year",
