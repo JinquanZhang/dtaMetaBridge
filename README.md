@@ -92,9 +92,9 @@ plot_sroc(
 
 完整参数请运行 `?fit_sroc` 与 `?plot_sroc`。
 
-## 从 `meta::metaprop()` 开始
+## 双森林图
 
-灵敏度对象的 `event/n` 必须是 TP/(TP + FN)，特异度对象必须是 TN/(TN + FP)。两个对象的研究名必须唯一且完全一致。
+使用 `meta::metaprop()` 时，灵敏度对象的 `event/n` 必须是 TP/(TP + FN)，特异度对象必须是 TN/(TN + FP)。两个对象的研究名必须唯一且完全一致。
 
 ```r
 library(meta)
@@ -107,8 +107,6 @@ meta_spec <- metaprop(TN, TN + FP, studlab = study, data = dta,
 dta_recovered <- dta_from_meta(meta_sens, meta_spec)
 fit <- fit_sroc(dta_recovered, auc_boot = 2000)
 ```
-
-## 双森林图
 
 ```r
 plot_sensspec_forest_meta(
