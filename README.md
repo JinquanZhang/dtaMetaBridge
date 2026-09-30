@@ -33,16 +33,9 @@ install.packages("dtametaTMB")
 每行必须是一项相互独立的研究，且含有研究名、TP、FP、FN、TN；四格表为非负整数，每项研究都必须至少包含一名患病与一名非患病受试者。
 
 ```r
-dta <- data.frame(
-  study = c("A", "B", "C", "D", "E", "F"),
-  year = c(2019, 2020, 2020, 2021, 2022, 2023),
-  TP = c(35, 42, 28, 60, 45, 70),
-  FN = c(15, 8, 22, 20, 15, 10),
-  TN = c(80, 65, 90, 55, 75, 60),
-  FP = c(20, 35, 10, 45, 25, 40)
-)
+dta <- read.csv("example-dta.csv")
 
-fit <- fit_sroc(dta, year_col = "year")
+fit <- fit_sroc(dta, year_col = "year", auc_boot = 2000)
 fit$metrics
 ```
 
@@ -82,7 +75,7 @@ plot_sroc(
 )
 ```
 
-![SROC 示例图：Rutter–Gatsonis 频率学拟合、95% 置信与预测轮廓。](inst/figures/sroc-example.png)
+![SROC 示例图：Rutter–Gatsonis 频率学拟合、95% 置信与预测轮廓。](inst/figures/sroc-current.png)
 
 - 汇总点为菱形；研究圈在轮廓与 SROC 曲线下方，研究编号默认黑色。
 - `x_axis = "specificity"`（默认）显示从 1 到 0 的特异度；`x_axis = "fpr"` 显示从 0 到 1 的 `1 - Specificity`。
@@ -137,7 +130,7 @@ plot_sensspec_forest_meta(
 )
 ```
 
-![双森林图示例：灵敏度与特异度的随机效应汇总、权重方块及异质性信息。](inst/figures/forest-example.png)
+![双森林图示例：灵敏度与特异度的随机效应汇总、权重方块及异质性信息。](inst/figures/forest-current.png)
 
 森林图菱形来自相应 `meta` 对象的随机效应汇总值。方块面积按各面板的 `w.random` 权重缩放；CI 横线与点估计短竖线位于方块上层。研究行区间为 Clopper–Pearson 精确二项区间，因此可能与 `meta` 对象所选的区间算法不同。
 
