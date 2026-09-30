@@ -156,9 +156,9 @@ posttest_probability(fit_freq, prevalence = c(.10, .30, .50),
 频率学模型直接拟合 Rutter–Gatsonis 层级模型：
 
 $$
-\operatorname{logit}(Se) =
-\Lambda \exp(-\beta/2) -
-\exp(-\beta)\operatorname{logit}(Sp).
+\mathrm{logit}(Se) =
+\Lambda e^{-\beta/2} -
+e^{-\beta}\mathrm{logit}(Sp).
 $$
 
 AUC 是该曲线在 FPR 0–1 的积分，不是单项研究连续评分 ROC 的 AUC。频率学 AUC 的 Bootstrap 每次均按研究重抽样并重新拟合模型。
