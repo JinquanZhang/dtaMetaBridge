@@ -1,3 +1,8 @@
+# dtaMetaBridge 1.8.0
+
+- 将 `dtametaTMB`、`meta4diag` 和 INLA 设为安装依赖，并声明 INLA 官方稳定仓库，
+  使安装本包时同步解析频率学和贝叶斯 SROC 所需组件。
+
 # dtaMetaBridge 1.7.0
 
 - 依据当前五个导出函数重写中文 README 与 R 帮助页；明确频率学

@@ -20,13 +20,7 @@ remotes::install_github("JinquanZhang/dtaMetaBridge")
 library(dtaMetaBridge)
 ```
 
-频率学 SROC 还需安装 `dtametaTMB`：
-
-```r
-install.packages("dtametaTMB")
-```
-
-贝叶斯 SROC 还需可用的 `INLA` 和 `meta4diag`。未安装这些可选包时，数据转换和双森林图仍可正常使用。
+`dtametaTMB`、`meta4diag` 和 `INLA` 已列为安装依赖；使用上述命令安装本包时会一并解析下载。INLA 使用其官方稳定仓库；若网络或单位镜像限制该仓库，请先配置可访问该地址的 R 软件源后重试。
 
 ## 基本工作流
 

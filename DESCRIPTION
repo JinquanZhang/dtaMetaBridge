@@ -1,6 +1,6 @@
 Package: dtaMetaBridge
 Title: Diagnostic Test Accuracy Meta-Analysis That Bridges 'meta' and HSROC Models
-Version: 1.7.0
+Version: 1.8.0
 Authors@R: person(given = "Jinquan", family = "Zhang", role = c("aut", "cre"), email = "jinquan_zhang_0607@163.com")
 Author: Jinquan Zhang [aut, cre]
 Maintainer: Jinquan Zhang <jinquan_zhang_0607@163.com>
@@ -23,9 +23,12 @@ Imports:
     lme4,
     MASS,
     mada,
-    meta
-Suggests:
+    meta,
     dtametaTMB,
     meta4diag,
+    INLA
+Additional_repositories:
+    https://inla.r-inla-download.org/R/stable
+Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
