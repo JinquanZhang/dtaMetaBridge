@@ -1,8 +1,10 @@
 \name{plot_sroc}
-\encoding{UTF-8}
 \alias{plot_sroc}
-\title{绘制 SROC 曲线及置信区域、预测区域}
-\description{从双变量模型结果绘图，支持完整 Rutter--Gatsonis 曲线及外观调整。}
+\title{绘制 SROC 曲线、置信轮廓和预测轮廓}
+\description{
+绘制 \code{\link{fit_sroc}} 结果的 SROC 图，包括研究点、汇总点、
+SROC 曲线、95\% 置信轮廓和 95\% 预测轮廓。
+}
 \usage{
 plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   output_file = NULL, width = 6, height = 5, dpi = 300, ...,
@@ -21,55 +23,38 @@ plot_sroc(fit, show_confidence = TRUE, show_prediction = TRUE,
   y_breaks = seq(0, 1, 0.2), x_axis = c("specificity", "fpr"))
 }
 \arguments{
-\item{fit}{\code{fit_sroc} 返回的拟合对象。}
-\item{show_confidence}{是否显示汇总点的 95\% 置信区域。}
-\item{show_prediction}{是否显示 95\% 预测区域。}
-\item{output_file}{保存路径；NULL 不保存。格式由 \code{ggplot2::ggsave} 支持情况决定。}
-\item{width,height}{保存宽度、高度，英寸。}
-\item{dpi}{保存分辨率。}
-\item{...}{保留位置；未识别的额外参数会报错。其后的参数须使用名称传入。}
-\item{full_curve}{TRUE 绘制 FPR 0--1 的完整模型曲线；FALSE 使用已存曲线，默认限制在观察范围。}
-\item{show_legend}{是否显示图内注释式图例。}
-\item{digits}{灵敏度、特异度的小数位数，0--10 的整数。}
-\item{custom_se,custom_sp,custom_auc}{自定义图例显示文字；NULL 使用计算值，不修改模型。}
-\item{legend_position}{四角位置 "bottomright"、"bottomleft"、"topright"、"topleft"，或 c(x,y) 指定图例框左下角。屏幕坐标 0 为左/下、1 为右/上，不受特异度反向坐标影响。}
-\item{legend_text_size}{图例字号，毫米，正数；标题稍大。}
-\item{legend_bg}{图例背景颜色，可用 "transparent"。}
-\item{font_family}{所有文字字体，默认 "sans"。}
-\item{base_size}{主题基础字号，磅；注释文字另行控制。}
-\item{title}{标题；NULL 不显示。}
-\item{show_study_labels}{是否在研究圆点内显示编号。}
-\item{study_size}{研究点大小，毫米。}
-\item{study_label_size}{研究编号字号，毫米。}
-\item{study_col}{研究圈边缘颜色。研究圈绘制在预测/置信轮廓和 SROC 曲线下方。}
-\item{study_label_col}{研究编号颜色，默认黑色。}
-\item{summary_size}{汇总点大小，毫米；汇总点固定为 45° 旋转正方形（菱形）。}
-\item{summary_col}{汇总点颜色。}
-\item{sroc_col}{仅 SROC 曲线颜色。}
-\item{sroc_linewidth}{SROC 线宽，毫米。}
-\item{confidence_col}{置信区域颜色。}
-\item{confidence_alpha}{置信区域填充透明度，0--1。}
-\item{prediction_col}{预测区域颜色。}
-\item{prediction_alpha}{预测区域填充透明度，0--1。}
-\item{auc_digits}{AUC 小数位数，0--10 整数；NULL 时 QMD 使用 digits，其他方法使用 3。}
-\item{x_breaks,y_breaks}{横纵轴刻度，0--1 内不重复数值；不改变坐标范围和算法。}
-\item{x_axis}{横坐标：\code{"specificity"}（默认，Specificity 从 1 递减至 0）或 \code{"fpr"}（1 - Specificity 从 0 递增至 1）。只改变显示，不改变模型或 AUC。}
+  \item{fit}{由 \code{fit_sroc()} 返回的对象。}
+  \item{show_confidence,show_prediction}{是否显示相应的 95\% 轮廓。}
+  \item{output_file}{可选输出文件路径；为空时返回 \code{ggplot} 对象。}
+  \item{width,height,dpi}{导出图像的英寸宽、高与分辨率。}
+  \item{...}{传给 \code{ggplot2::ggsave()} 的额外参数。}
+  \item{full_curve}{是否外推并显示完整 FPR 0--1 的 SROC。默认仅显示
+  数据支持范围，避免把外推部分误解为观测证据。}
+  \item{show_legend,digits}{是否显示图例及汇总指标的小数位数。}
+  \item{custom_se,custom_sp,custom_auc}{覆盖图例中相应指标文本的可选字符串。}
+  \item{legend_position,legend_text_size,legend_bg}{图例位置、字号和背景色。}
+  \item{font_family,base_size,title}{全图字体、基础字号和标题。}
+  \item{show_study_labels,study_size,study_label_size,study_col,study_label_col}{研究点及标签的显示控制。研究点绘制在曲线和轮廓下方；标签默认黑色。}
+  \item{summary_size,summary_col}{汇总点（45 度旋转正方形）的大小和颜色。}
+  \item{sroc_col,sroc_linewidth}{SROC 曲线颜色和线宽。}
+  \item{confidence_col,confidence_alpha,prediction_col,prediction_alpha}{两类轮廓的颜色和透明度。}
+  \item{auc_digits}{AUC 单独的小数位数；为空时使用 \code{digits}。}
+  \item{x_breaks,y_breaks}{横轴和纵轴刻度。}
+  \item{x_axis}{\code{"specificity"} 为从 1 到 0 的特异度横轴；
+  \code{"fpr"} 为从 0 到 1 的 1 - 特异度横轴。}
 }
+\value{一个 \code{ggplot} 对象；若指定 \code{output_file}，同时保存图像。}
 \details{
-横轴为特异度，由 1 递减到 0；纵轴为灵敏度。
-默认拟合方法为直接的频率学 Rutter--Gatsonis HSROC。
-full_curve 只改变绘图，不改变汇总估计、AUC 或区域；观察范围外属于模型外推。
-标准方法的 AUC 为完整曲线积分，未估计 AUC 置信区间。
-图例框以实际测量的最长文字行宽度为基准，并结合目标输出宽高、字号、符号列及内边距自适应；高度按文字行数和行高自适应。低尺寸无法容纳完整文字时会报错，不会截断文字。
-置信区域描述汇总点不确定性，预测区域描述新研究可能的真实效应，不是曲线置信带。
+频率学结果的 AUC 区间来自 \code{fit_sroc()} 的 Bootstrap；贝叶斯结果使用后验
+可信区间。图例框会按实际文字宽度和字号测量后自适应布局；若输出画布过小，
+函数会报错而不截断文字。研究点为未调整的单研究灵敏度和特异度，轮廓反映模型
+中的汇总点不确定性及研究间变异。
 }
-\value{可继续用 ggplot2 修改或保存的 ggplot 对象。}
-\seealso{\code{\link{fit_sroc}}, \code{\link{posttest_probability}}}
 \examples{
-d <- data.frame(study = LETTERS[1:6],
-  TP = c(35, 42, 28, 60, 45, 70), FN = c(15, 8, 22, 20, 15, 10),
-  TN = c(80, 65, 90, 55, 75, 60), FP = c(20, 35, 10, 45, 25, 40))
-fit <- fit_sroc(d, backend = "frequency")
-plot_sroc(fit, full_curve = TRUE, legend_position = "bottomright",
-  show_study_labels = FALSE, sroc_col = "navy")
+\dontrun{
+fit <- fit_sroc(dat, backend = "frequency", auc_boot = 200)
+plot_sroc(fit, x_axis = "fpr", full_curve = TRUE,
+  output_file = "sroc.png")
 }
+}
+\keyword{dplot}

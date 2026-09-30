@@ -1,297 +1,172 @@
 # dtaMetaBridge
 
-`dtaMetaBridge` 用于衔接配对的 `meta::metaprop()` 对象与标准诊断试验准确性
-meta 分析，提供双森林图、直接频率学 Rutter–Gatsonis HSROC、贝叶斯双变量 SROC 和检验后概率。
+`dtaMetaBridge` 是用于诊断试验准确性（DTA）Meta 分析的 R 包。它可将配对的 `meta::metaprop()` 对象还原为四格表，绘制灵敏度/特异度双森林图，拟合 SROC，并计算检验后概率。
 
-## 使用教程
+## 功能
 
-### 四格表直接拟合 SROC 曲线
+| 函数 | 作用 |
+| --- | --- |
+| `dta_from_meta()` | 从配对 `metaprop` 对象还原 `study`、TP、FP、FN、TN。 |
+| `plot_sensspec_forest_meta()` | 用配对 `meta` 对象或四格表绘制双森林图。 |
+| `fit_sroc()` | 由四格表拟合频率学或贝叶斯 SROC。 |
+| `plot_sroc()` | 绘制 SROC、汇总点、置信/预测轮廓及研究点。 |
+| `posttest_probability()` | 计算 PPV、NPV 与其模拟区间。 |
 
-`fit_sroc()` 默认直接用频率学 Rutter–Gatsonis HSROC 二项似然模型拟合四格表。
-`backend = "frequency"` 固定直接拟合第 5 类 Rutter–Gatsonis 曲线。
-`backend = "bayes"` 可调用 INLA 贝叶斯双变量模型，并选择 `meta4diag::SROC()` 的 1--5 种公式；
-须先安装 `INLA` 与 `meta4diag`。
-
-```r
-df_dat <- data.frame(
-  study = c("Briasoulis", "Kravchenko", "Ridouani", "Ridouani"),
-  Year = c("2023", "2024", "2018", "2018"),
-  TP = c(52, 15, 20, 10), FP = c(1, 4, 1, 0),
-  FN = c(19, 5, 4, 14), TN = c(16, 29, 19, 20)
-)
-fit <- fit_sroc(df_dat, sroc_type = 5, auc_boot = 2000, n_cores = 6)
-plot_sroc(fit, full_curve = TRUE)
-?fit_sroc
-```
-
-贝叶斯模型使用相同的四格表输入：
+## 安装
 
 ```r
-fit_bayes <- fit_sroc(
-  df_dat, backend = "bayes", sroc_type = 5,
-  posterior_samples = 2000
-)
-plot_sroc(fit_bayes, full_curve = TRUE)
-```
-
-`frequency` 默认以 2,000 次研究层 Bootstrap 计算 AUC 95% CI；`bayes` 的 AUC 区间是
-后验 95% CrI，两者不能按相同的频率学含义解读。
-`n_cores = 6` 是频率学 Bootstrap 的默认并行核心数；会自动不超过本机物理核心数。Windows 同样可用。
-
-频率学后端固定使用原生 Rutter–Gatsonis 曲线（`sroc_type = 5`）。贝叶斯后端可选择：1 回归线1，2 主轴，3 Moses–Littenberg 型曲线，4 回归线2，5 Rutter–Gatsonis（默认）。
-贝叶斯后端中的类型编号是同一模型上的曲线公式选择，而不是五种模型拟合；同一数据的汇总点和区域保持一致。
-重复研究名只加显示编号，不合并数据；同一人群不同阈值不能当作独立研究。此时应采用
-`dtametaTMB::fitHoyer()` 或 `diagmeta` 等多阈值模型，保留阈值间的相关性。
-示例仅四行且相关系数接近边界，五条曲线可能几乎重合，不能据此判断公式无差别。
-零协方差或零分母会使某些公式不可用，函数明确报错；非正斜率会警告并省略 AUC。
-详见 [meta4diag SROC 官方文档](https://search.r-project.org/CRAN/refmans/meta4diag/html/SROC.html)。
-
-### 安装
-
-```r
-install.packages("remotes")       # 只需安装一次
+install.packages("remotes") # 仅需一次
 remotes::install_github("JinquanZhang/dtaMetaBridge")
 library(dtaMetaBridge)
 ```
 
-固定安装本版：`remotes::install_github("JinquanZhang/dtaMetaBridge@v1.4.0")`。
-
-更新后请重启 R，再加载包。三个主要函数都有独立中文帮助页，包含用法、参数和示例：
+频率学 SROC 还需安装 `dtametaTMB`：
 
 ```r
-?plot_sensspec_forest_meta
-?plot_sroc
-?posttest_probability
-?fit_sroc
-# 不加载包也可查询：
-help("plot_sroc", package = "dtaMetaBridge")
-packageVersion("dtaMetaBridge")
+install.packages("dtametaTMB")
 ```
 
-### 数据格式
+贝叶斯 SROC 还需可用的 `INLA` 和 `meta4diag`。未安装这些可选包时，数据转换和双森林图仍可正常使用。
 
-每一行是一项研究，必须有研究名称及四格表计数：`TP`（真阳性）、`FP`（假阳性）、
-`FN`（假阴性）、`TN`（真阴性）。
+## 基本工作流
+
+每行必须是一项相互独立的研究，且含有研究名、TP、FP、FN、TN；四格表为非负整数，每项研究都必须至少包含一名患病与一名非患病受试者。
 
 ```r
 dta <- data.frame(
-  study = c("Parcha 2021", "Tada 2021", "Forsyth 2021", "Reddy 2022",
-            "Ariyaratnam 2024", "Akerman 2025", "Wang 2023", "Nguyen 2025", "Rahi 2026"),
-  TP = c(169,113,11,163,61,117,61,110,71), FP = c(29,5,16,3,11,42,2,36,27),
-  FN = c(122,113,39,222,27,123,140,8,9), TN = c(350,173,11,99,21,214,116,126,85)
+  study = c("A", "B", "C", "D", "E", "F"),
+  year = c(2019, 2020, 2020, 2021, 2022, 2023),
+  TP = c(35, 42, 28, 60, 45, 70),
+  FN = c(15, 8, 22, 20, 15, 10),
+  TN = c(80, 65, 90, 55, 75, 60),
+  FP = c(20, 35, 10, 45, 25, 40)
+)
+
+fit <- fit_sroc(dta, year_col = "year")
+fit$metrics
+```
+
+默认是直接频率学 Rutter–Gatsonis HSROC。AUC 默认进行 2,000 次研究层 Bootstrap 并给出 95% CI；默认使用至多 6 个物理核心。快速预览可关闭 Bootstrap：
+
+```r
+fit_fast <- fit_sroc(dta, year_col = "year", auc_boot = 0)
+```
+
+## SROC 模型
+
+| 后端 | 调用 | 区间 | SROC 类型 |
+| --- | --- | --- | --- |
+| `"frequency"`（默认） | `dtametaTMB::fitRutterGatsonis()` | Se/Sp：Wald 95% CI；AUC：研究层 Bootstrap 95% CI。 | 仅类型 5，即原生 Rutter–Gatsonis。 |
+| `"bayes"` | `meta4diag::meta4diag()` | 后验 95% CrI。 | 可用类型 1–5。 |
+
+```r
+fit_freq <- fit_sroc(dta, backend = "frequency", year_col = "year",
+                     auc_boot = 2000, n_cores = 6, seed = 2026)
+
+fit_bayes <- fit_sroc(dta, backend = "bayes", year_col = "year",
+                      sroc_type = 5, posterior_samples = 2000, seed = 2026)
+```
+
+频率学 CI 和贝叶斯 CrI 的概率解释不同，不能直接当作同一种区间比较。`fit$metrics` 包含 `sensitivity`、`specificity`、`auc` 以及观察 FPR 范围内的未标准化 `pauc`。
+
+## 绘制 SROC
+
+```r
+plot_sroc(
+  fit_freq,
+  output_file = "sroc.png", width = 6, height = 6, dpi = 300,
+  full_curve = TRUE,
+  x_axis = "specificity", # 或 "fpr"，即 1 - Specificity
+  study_col = "#7F8C8D", study_label_col = "black",
+  summary_col = "#C0392B", sroc_col = "#2C3E50"
 )
 ```
 
-以上为原 QMD 的 H2 rule-in 输入，用于复现文件输出，不表示已重新核验各论文的四格表。
+- 汇总点为菱形；研究圈在轮廓与 SROC 曲线下方，研究编号默认黑色。
+- `x_axis = "specificity"`（默认）显示从 1 到 0 的特异度；`x_axis = "fpr"` 显示从 0 到 1 的 `1 - Specificity`。
+- `full_curve = FALSE` 只显示观察到的 FPR 范围；`TRUE` 显示 FPR 0–1 的模型外推曲线。它们不改变拟合、AUC 或汇总估计。
+- 置信轮廓描述联合汇总点的不确定性，预测轮廓描述新研究可能的真实准确性；二者均不是整条曲线的置信带。
+- 图例框会实测最长文字行宽度，并结合字号与目标输出尺寸自适应。若图形太小而不能完整容纳图例，函数会报错；请增大 `width`/`height` 或减小 `legend_text_size`。
 
-### 从 `meta` 对象开始：森林图、SROC 与 post-test probability
+常用外观设置：
+
+```r
+plot_sroc(
+  fit_freq, title = "SROC", base_size = 12,
+  show_study_labels = TRUE, study_size = 3.5, study_label_size = 2.3,
+  confidence_col = "#2E86C1", confidence_alpha = .20,
+  prediction_col = "grey70", prediction_alpha = .15,
+  legend_position = "bottomright", legend_bg = "#F8F9FA",
+  legend_text_size = 3.2
+)
+```
+
+完整参数请运行 `?fit_sroc` 与 `?plot_sroc`。
+
+## 从 `meta::metaprop()` 开始
+
+灵敏度对象的 `event/n` 必须是 TP/(TP + FN)，特异度对象必须是 TN/(TN + FP)。两个对象的研究名必须唯一且完全一致。
 
 ```r
 library(meta)
 
-# 1. 分别拟合灵敏度和特异度的单变量随机效应 GLMM。
 meta_sens <- metaprop(TP, TP + FN, studlab = study, data = dta,
                       method = "GLMM", method.tau = "ML")
 meta_spec <- metaprop(TN, TN + FP, studlab = study, data = dta,
                       method = "GLMM", method.tau = "ML")
 
-# 2. 双森林图：菱形直接采用上述 meta 对象的随机效应汇总值。
-plot_sensspec_forest_meta(meta_sens, meta_spec,
-                           output_file = "forest.png")
-
-# 3. 由还原的四格表拟合频率学双变量模型 + Rutter–Gatsonis HSROC。
-fit <- fit_sroc(dta_from_meta(meta_sens, meta_spec), backend = "frequency")
-plot_sroc(fit)
-
-# 绘制完整的 Rutter-Gatsonis 曲线（包括观察范围外的模型外推）
-plot_sroc(fit, full_curve = TRUE)
-
-# 4. 按预检概率计算阳性和阴性后的患病概率及 95% 不确定性区间。
-posttest_probability(fit, prevalence = c(0.10, 0.30, 0.50))
+dta_recovered <- dta_from_meta(meta_sens, meta_spec)
+fit <- fit_sroc(dta_recovered, auc_boot = 2000)
 ```
 
-### 示例图
-
-下图由上面的示例数据和函数生成。左图的森林图汇总值来自两个独立的
-`meta::metaprop()` 随机效应模型；SROC 的方块来自联合 Reitsma 模型，故两组汇总
-灵敏度/特异度数值可能略有差异，这是模型定义不同所致，并非计算不一致。
-
-下表左侧为生成代码，右侧为对应输出图。代码使用上文的 `dta`、`meta_sens`、
-`meta_spec` 和 `fit` 对象。
-
-<table>
-<tr><th>绘图代码</th><th>示例图</th></tr>
-<tr>
-<td><pre><code>plot_sensspec_forest_meta(
-  meta_sens, meta_spec,
-  output_file = "forest-example.png",
-  width = 10, res = 300
-)</code></pre></td>
-<td><img src="inst/figures/forest-example.png" alt="双森林图" width="600"></td>
-</tr>
-<tr>
-<td><pre><code>plot_sroc(
-  fit,
-  output_file = "sroc-example.png",
-  width = 6, height = 6, dpi = 300
-)</code></pre></td>
-<td><img src="inst/figures/sroc-example.png" alt="SROC 曲线" width="450"></td>
-</tr>
-</table>
-
-### 异质性与列宽调整
-
-使用 `plot_sensspec_forest_meta()` 时，图底部会自动显示灵敏度和特异度各自的
-`I2`、`tau2`、Cochran Q 和 p 值。研究方块面积在各面板内正比于对应 `meta` 对象的
-随机效应权重 `w.random`（特异度权重按研究名称对齐），不再按样本量缩放。
-GLMM 对象通常不提供该权重，此时明确警告并使用等大方块，不代表等权模型，也不会改动汇总结果。
-需要实际权重的森林图时可另行拟合 `method = "Inverse"` 的模型；这会改变模型及汇总结果，不能只为改变图形而混用权重。
-绘图顺序为灰色方块、完整 95% CI 横线、点估计短竖线，
-汇总菱形为红色。`column_widths` 是一个命名数值向量；数值是各列的相对宽度，可按
-版面需要调整。下例加宽研究名称和两张森林图区，并指定与示例图相同的坐标刻度：
+## 双森林图
 
 ```r
 plot_sensspec_forest_meta(
   meta_sens, meta_spec,
-  output_file = "forest-wide.png",
-  sens_axis = seq(0.2, 1, 0.2),
-  spec_axis = seq(0.4, 1, 0.2),
+  output_file = "sensspec_forest.png", width = 11, res = 300,
   column_widths = c(
-    study = 3.2, tp = 0.45, fp = 0.45, fn = 0.45, tn = 0.45,
-    sens_text = 1.5, spec_text = 1.5,
-    sens_plot = 1.2, spec_plot = 1.2
-  )
+    study = 2.8, tp = .5, fp = .5, fn = .5, tn = .5,
+    sens_text = 1.6, spec_text = 1.6, sens_plot = 1.2, spec_plot = 1.2
+  ),
+  font_family = "serif", square_col = "grey70", square_max_mm = 5,
+  ci_col = "black", diamond_col = "#C00000",
+  heterogeneity_cex = .66, heterogeneity_x = .015
 )
 ```
 
-### 结果如何解释
+森林图菱形来自相应 `meta` 对象的随机效应汇总值。方块面积按各面板的 `w.random` 权重缩放；CI 横线与点估计短竖线位于方块上层。研究行区间为 Clopper–Pearson 精确二项区间，因此可能与 `meta` 对象所选的区间算法不同。
 
-### 字号、行距与颜色
-
-以下新参数可直接传给 `plot_sensspec_forest_meta()`，均不改变统计结果：
+也可直接传入四格表：
 
 ```r
-plot_sensspec_forest_meta(
-  meta_sens, meta_spec,
-  header_cex = 0.86,        # 表头
-  study_cex = 0.72,         # 研究名称和四格表计数
-  ci_text_cex = 0.68,       # 研究灵敏度/特异度及 CI 文字
-  summary_cex = 0.78,      # Total 标签
-  summary_count_cex = 0.75,# 汇总计数
-  summary_ci_cex = 0.70,   # 汇总灵敏度/特异度及 CI 文字
-  axis_cex = 0.68,         # 横轴刻度
-  row_gap = NULL,          # 自动行距；9 项研究可尝试 0.05 或 0.06
-  square_col = "grey70",   # 方块颜色
-  square_max_mm = 5,       # 最大方块边长（毫米）
-  ci_col = "black",        # CI 横线及点估计短竖线颜色
-  ci_lwd = 1.2,            # CI 横线及短竖线粗细
-  diamond_col = "#C00000"  # 汇总菱形颜色
-)
+plot_sensspec_forest_meta(dta, use_meta_summary = FALSE)
 ```
 
-上面列出的是默认值。所有 `cex` 均为相对字号，不是 pt。
-`row_gap` 为图高比例，越大越疏；总研究行跨度不得超过图高的 0.52，
-研究较多时需减小行距。汇总行和坐标轴会随研究行移动；手动指定的
-`heterogeneity_y` 不会跟着移动，必要时改回 `NULL` 自动定位。
-加大字体或方块仍可能造成重叠，可增大导出 `height` 并检查成图。
+完整森林图参数请运行 `?plot_sensspec_forest_meta`。
 
-异质性文字可通过以下参数调整（不影响统计结果）：
-
-森林图所有文字默认统一使用 `font_family = "serif"`，包括表头、研究名称、
-数值、坐标刻度和异质性文字。可设为 `"sans"` 或 `"mono"`；其他字体需由
-当前绘图设备支持。字体统一不改变各处字号及粗体层级。
+## 检验后概率
 
 ```r
-plot_sensspec_forest_meta(
-  meta_sens, meta_spec,
-  heterogeneity_cex = 0.8,          # 相对字号；默认 0.66，不是 pt
-  font_family = "serif",           # 全图统一字体
-  heterogeneity_x = 0.02,           # 两行左端位置：0 为最左，1 为最右
-  heterogeneity_y = c(0.20, 0.15)   # 灵敏度、特异度；0 为底部，1 为顶部
-)
+posttest_probability(fit_freq, prevalence = c(.10, .30, .50),
+                     n_sims = 3000, seed = 2026)
 ```
 
-`heterogeneity_y = NULL`（默认）会自动将两行放在汇总行下方。
-手动位置不会自动避让其他元素；增大字体或移动文字后，请检查是否重叠或超出图边界。
+返回每个检验前概率下的汇总灵敏度、特异度、PPV、NPV 及模拟 95% 区间。阴性后的患病概率是 `1 - npv`。区间只反映汇总准确性的不确定性，不含检验前概率不确定性，也不是新研究预测区间。
 
-- 森林图菱形：分别汇总灵敏度与特异度，适用于展示每个结局的异质性。
-- SROC：`fit_sroc()` 默认 `sroc_type = 5`，直接以 Rutter–Gatsonis 二项似然 HSROC 模型生成曲线；零格由二项模型直接处理。
-- 曲线默认只显示观察到的 FPR 范围；完整 AUC 对同一曲线在 FPR 0–1 上积分，包含范围外的模型外推。`pauc` 是观察范围内的未标准化面积。
-- `fit_sroc()` 默认以 `auc_boot = 2000, n_cores = 6` 并行给出 AUC 研究层 Bootstrap 95% CI；快速预览可设 `auc_boot = 0`。图中置信轮廓针对联合汇总点，不是整条 SROC 的置信带。
-- `qmd`、`midas`、`naive` 仅为显式可选方法；不是本文默认方法。
-- `fit$metrics$auc`：跨研究的 SROC 区分能力汇总，不能替代单项研究中连续评分的 ROC AUC。
-- post-test probability：区间反映汇总平均准确性的抽样不确定性，不是未来任一新场景的预测区间。
+## 方法与适用边界
 
-## 主要函数
+频率学模型直接拟合 Rutter–Gatsonis 层级模型：
 
-### SROC 图形参数
+\[
+\operatorname{logit}(Se) = \Lambda\exp(-\beta/2) - \exp(-\beta)\operatorname{logit}(Sp).
+\]
 
-以下参数适用于 `plot_sroc()` 的各绘图分支；`full_curve = TRUE` 支持由 `fit_sroc()`
-生成的完整模型曲线，不改变拟合模型、汇总数值或 AUC。
+AUC 是该曲线在 FPR 0–1 的积分，不是单项研究连续评分 ROC 的 AUC。频率学 AUC 的 Bootstrap 每次均按研究重抽样并重新拟合模型。
 
-```r
-plot_sroc(
-  fit, full_curve = TRUE,
-  show_confidence = TRUE, show_prediction = TRUE, show_legend = TRUE,
-  legend_position = "bottomright", # bottomleft / topright / topleft 或 c(.54, .03)
-  legend_text_size = 3.5, legend_bg = "#F8F9FA",
-  font_family = "sans", base_size = 14,
-  title = "SROC with Prediction & Confidence Contours", # NULL 隐藏标题
-  show_study_labels = TRUE, study_size = 4, study_label_size = 2.5,
-  study_col = "#7F8C8D", # 研究圈边缘颜色；绘制在线条下方
-  study_label_col = "black", # 研究编号颜色
-  summary_size = 4.5, summary_col = "#C0392B", # 汇总点为菱形
-  sroc_col = "#2C3E50", sroc_linewidth = 1.2,
-  confidence_col = "#2980B9", confidence_alpha = .2,
-  prediction_col = "#BDC3C7", prediction_alpha = .15,
-  digits = 2, auc_digits = 3,
-  custom_se = NULL, custom_sp = NULL, custom_auc = NULL,
-  x_breaks = seq(0, 1, .2), y_breaks = seq(0, 1, .2),
-  x_axis = "specificity", # 或 "fpr"，显示 1 - Specificity
-  output_file = "sroc.png", width = 6, height = 6, dpi = 300
-)
-```
+同一受试者群体的多个阈值不能被当作独立研究传给 `fit_sroc()`；请使用多阈值模型（如 `dtametaTMB::fitHoyer()` 或 `diagmeta`）处理阈值间相关性。少量研究、稀疏数据或方差边界时，应检查收敛并进行敏感性分析。
 
-`legend_position = c(x, y)` 指图例框左下角，按画面坐标定位：0 为最左/最底，
-1 为最右/最顶，与倒序的特异度轴无关。图例框会实测最长文字行的渲染宽度，
-再结合目标输出宽高、字号、符号列与内边距计算自适应宽度；高度随文字行数和行高自适应。
-低尺寸不能完整容纳文字时会报错而非截断，可增大 `width`/`height` 或减小 `legend_text_size`。
-图例为手工注释，不能用 `theme(legend.position=...)` 移动。
-`base_size` 单位是 pt，图例文字、点及编号大小是 mm；字体须被当前设备支持。
-`alpha` 范围为 0–1，0 完全透明。刻度参数不改变轴范围。
-`auc_digits = NULL` 时，QMD 沿用 `digits`，其他模型使用 3 位小数。
-`custom_auc = NULL` 自动生成文字；区间未估计时仅显示 AUC 点估计，不显示 NA。
-`x_axis = "specificity"`（默认）显示反向 Specificity 轴；`x_axis = "fpr"` 显示正向 1 - Specificity 轴。两者不改变拟合、AUC 或汇总数值。
-MIDAS 绘图现与其他分支共用渲染函数，也支持这些选项（其默认外观相应统一）。
+## 引用
 
-| 函数 | 用途 |
-| --- | --- |
-| `dta_from_meta()` | 从匹配的灵敏度和特异度 `metaprop` 对象还原四格表。 |
-| `plot_sensspec_forest_meta()` | 保留 `meta` 随机效应汇总菱形，绘制双森林图。 |
-| `plot_sroc()` | 绘制 HSROC 曲线、置信轮廓、预测轮廓和研究点。 |
-| `posttest_probability()` | 计算不同预检概率下的 PPV、NPV 及模拟法 95% 区间。 |
-
-## 方法与论文引用
-
-频率学默认方法为直接的 Rutter–Gatsonis HSROC 二项似然模型，使用
-`dtametaTMB::fitRutterGatsonis()` 估计；曲线严格按其 \(\Lambda\)、\(\beta\) 参数计算。
-贝叶斯方法使用 `meta4diag`；两类模型的区间含义与计算实现不同，数值不应强制完全一致。
-少研究、稀疏数据或方差边界时应检查模型稳定性。
-
-### 可用于论文的方法描述
-
-采用 Rutter–Gatsonis 层级回归模型联合汇总灵敏度与特异度，基于原始四格表的二项似然以频率学方法估计。
-根据模型原生参数 \(\Lambda\) 和 \(\beta\)，以 `logit(Se)=Λ exp(-β/2)-exp(-β) logit(Sp)` 绘制 SROC 曲线。
-报告联合汇总点的 95% 置信区域和近似 95% 预测区域。
-AUC 通过对拟合 SROC 曲线在假阳性率 0–1 范围内数值积分计算。
-
-### 参考文献
-
-1. Rutter CM, Gatsonis CA. A hierarchical regression approach to meta-analysis of diagnostic test accuracy evaluations. *Stat Med*. 2001;20:2865–2884. [doi:10.1002/sim.942](https://doi.org/10.1002/sim.942)
-2. Reitsma JB, et al. Bivariate analysis of sensitivity and specificity produces informative summary measures in diagnostic reviews. *J Clin Epidemiol*. 2005;58:982–990. [doi:10.1016/j.jclinepi.2005.02.022](https://doi.org/10.1016/j.jclinepi.2005.02.022)
-3. Harbord RM, et al. A unification of models for meta-analysis of diagnostic accuracy studies. *Biostatistics*. 2007;8:239–251. [doi:10.1093/biostatistics/kxl004](https://doi.org/10.1093/biostatistics/kxl004)
-
-软件实现见 [dtametaTMB 文档](https://rdrr.io/cran/dtametaTMB/man/fitRutterGatsonis.html)。
-R 中可运行 `citation("dtaMetaBridge")` 查看方法文献。
-
-本包不能替代研究方案、原始四格表核验或偏倚风险评价。
+- Rutter CM, Gatsonis CA. A hierarchical regression approach to meta-analysis of diagnostic test accuracy evaluations. *Statistics in Medicine*. 2001;20:2865–2884. doi:10.1002/sim.942.
+- Reitsma JB, et al. Bivariate analysis of sensitivity and specificity produces informative summary measures in diagnostic reviews. *Journal of Clinical Epidemiology*. 2005;58:982–990. doi:10.1016/j.jclinepi.2005.02.022.
