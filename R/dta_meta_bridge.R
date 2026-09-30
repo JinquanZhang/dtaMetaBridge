@@ -386,7 +386,8 @@ plot_sroc <- function(fit, show_confidence = TRUE, show_prediction = TRUE, outpu
     summary_size = summary_size, summary_col = summary_col, sroc_col = sroc_col, sroc_linewidth = sroc_linewidth,
     confidence_col = confidence_col, confidence_alpha = confidence_alpha,
     prediction_col = prediction_col, prediction_alpha = prediction_alpha,
-    auc_digits = auc_digits, x_breaks = x_breaks, y_breaks = y_breaks, x_axis = x_axis)
+    auc_digits = auc_digits, x_breaks = x_breaks, y_breaks = y_breaks, x_axis = x_axis,
+    output_file = output_file, plot_width = width, plot_height = height)
   if (!is.null(output_file)) ggplot2::ggsave(output_file, plot = p, width = width, height = height, dpi = dpi)
   p
 }

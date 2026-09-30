@@ -126,7 +126,8 @@ plot_metandi <- function(model_obj, digits = 2,
                          confidence_col = "#2980B9", confidence_alpha = .2,
                          prediction_col = "#BDC3C7", prediction_alpha = .15,
                          auc_digits = digits, x_breaks = seq(0, 1, .2),
-                         y_breaks = seq(0, 1, .2), x_axis = c("specificity", "fpr")) {
+                         y_breaks = seq(0, 1, .2), x_axis = c("specificity", "fpr"),
+                         output_file = NULL, plot_width = 6, plot_height = 5) {
   x_axis <- match.arg(x_axis)
   for (name in c("show_conf", "show_pred", "show_legend", "show_study_labels")) {
     value <- get(name)
@@ -252,19 +253,33 @@ plot_metandi <- function(model_obj, digits = 2,
   
   # 5. Add legend annotations
   if (show_legend) {
-    scale <- legend_text_size / 3.5
     labels <- c(obs = "Observed Data", sum = sprintf("Summary Point\n%s\n%s", str_se, str_sp),
       sroc = sprintf("SROC Curve\n%s", str_auc))
     if (show_conf) labels <- c(labels, conf = "95% Confidence Contour")
     if (show_pred) labels <- c(labels, pred = "95% Prediction Contour")
     line_count <- vapply(strsplit(labels, "\n", fixed = TRUE), length, integer(1))
-    line_height <- .048 * scale
-    gap <- .012 * scale
-    padding <- .025 * scale
-    box_height <- sum(line_count * line_height) + (length(labels) - 1) * gap + 2 * padding
-    longest_line <- max(nchar(unlist(strsplit(labels, "\n", fixed = TRUE)), type = "width"))
-    # ponytail: text-width approximation keeps the annotation in data coordinates.
-    box_width <- max(.20, min(.96, .12 + longest_line * .012 * scale))
+    label_size <- rep(legend_text_size, length(labels)); names(label_size) <- names(labels)
+    label_size["obs"] <- legend_text_size * 4 / 3.5
+    line_owner <- rep(names(labels), line_count)
+    lines <- unlist(strsplit(labels, "\n", fixed = TRUE), use.names = FALSE)
+    line_size <- unname(label_size[line_owner])
+    measure_width <- function(text, size_mm) {
+      grob <- grid::textGrob(text, gp = grid::gpar(fontsize = size_mm * 72 / 25.4, fontfamily = font_family))
+      grid::convertWidth(grid::grobWidth(grob), "in", valueOnly = TRUE)
+    }
+    text_width_in <- max(mapply(measure_width, lines, line_size))
+    device_in <- if (is.null(output_file)) grDevices::dev.size("in") else c(plot_width, plot_height)
+    # Reserve room for axes, labels, title and plot margins around the square panel.
+    panel_in <- max(.75, min(device_in) - 1.2)
+    # Measure text in inches, then express the required panel space on the 0--1 plot scale.
+    padding_in <- .08
+    symbol_in <- max(.35, max(study_size, summary_size) / 25.4 + .18)
+    box_width <- max(.20, (2 * padding_in + symbol_in + text_width_in) / panel_in)
+    entry_height_in <- line_count * label_size / 25.4 * 1.25
+    gap_in <- legend_text_size / 25.4 * .45
+    box_height <- (sum(entry_height_in) + (length(labels) - 1) * gap_in + 2 * padding_in) / panel_in
+    if (box_width > .96 || box_height > .96)
+      stop("Legend does not fit: enlarge width/height, reduce legend_text_size, or shorten custom text.", call. = FALSE)
     screen_anchor <- if (is.character(legend_position)) {
       c(if (grepl("right", legend_position)) .98 - box_width else .02,
         if (grepl("top", legend_position)) .98 - box_height else .03)
@@ -272,14 +287,15 @@ plot_metandi <- function(model_obj, digits = 2,
     if (screen_anchor[1] + box_width > 1 || screen_anchor[2] + box_height > 1 || any(screen_anchor < 0))
       stop("Legend does not fit: reduce legend_text_size or move legend_position.", call. = FALSE)
     x_coord <- function(x) if (x_axis == "specificity") 1 - x else x
-    x_line <- x_coord(screen_anchor[1] + .04)
-    x_text <- x_coord(screen_anchor[1] + .08)
-    y_current <- screen_anchor[2] + box_height - padding
-    y_pos <- lapply(line_count, function(n) {
-      y <- y_current - n * line_height / 2
-      y_current <<- y_current - n * line_height - gap
+    x_line <- x_coord(screen_anchor[1] + padding_in / panel_in + symbol_in / (2 * panel_in))
+    x_text <- x_coord(screen_anchor[1] + (padding_in + symbol_in) / panel_in)
+    y_current <- screen_anchor[2] + box_height - padding_in / panel_in
+    y_pos <- lapply(entry_height_in / panel_in, function(h) {
+      y <- y_current - h / 2
+      y_current <<- y_current - h - gap_in / panel_in
       y
     })
+    line_half <- .06 / panel_in
     
     p <- p +
       ggplot2::annotate("rect", xmin = x_coord(screen_anchor[1]), xmax = x_coord(screen_anchor[1] + box_width),
@@ -295,7 +311,7 @@ plot_metandi <- function(model_obj, digits = 2,
                label = labels[["sum"]],
                hjust = 0, size = legend_text_size, family = font_family, lineheight = 1.1) +
       
-      ggplot2::annotate("segment", x = x_line+0.02, xend = x_line-0.02, y = y_pos$sroc, yend = y_pos$sroc, 
+      ggplot2::annotate("segment", x = x_line + line_half, xend = x_line - line_half, y = y_pos$sroc, yend = y_pos$sroc,
                color = col_sroc, linewidth = sroc_linewidth) +
       ggplot2::annotate("text", x = x_text, y = y_pos$sroc, 
                label = labels[["sroc"]],
@@ -304,14 +320,14 @@ plot_metandi <- function(model_obj, digits = 2,
     # Add contour labels if requested
     if (show_conf) {
       p <- p + 
-        ggplot2::annotate("segment", x = x_line+0.02, xend = x_line-0.02, y = y_pos$conf, yend = y_pos$conf, 
+        ggplot2::annotate("segment", x = x_line + line_half, xend = x_line - line_half, y = y_pos$conf, yend = y_pos$conf,
                  color = col_conf, linewidth = 0.8, linetype = "dashed") +
         ggplot2::annotate("text", x = x_text, y = y_pos$conf, label = labels[["conf"]], hjust = 0, size = legend_text_size, family = font_family)
     }
     
     if (show_pred) {
       p <- p + 
-        ggplot2::annotate("segment", x = x_line+0.02, xend = x_line-0.02, y = y_pos$pred, yend = y_pos$pred, 
+        ggplot2::annotate("segment", x = x_line + line_half, xend = x_line - line_half, y = y_pos$pred, yend = y_pos$pred,
                  color = col_pred, linewidth = 0.8, linetype = "dotted") +
         ggplot2::annotate("text", x = x_text, y = y_pos$pred, label = labels[["pred"]], hjust = 0, size = legend_text_size, family = font_family)
     }

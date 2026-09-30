@@ -55,6 +55,19 @@ test_that("SROC legend box adapts to its text and visible entries", {
   expect_gt(standard$ymax - standard$ymin, compact$ymax - compact$ymin)
 })
 
+test_that("SROC legend measures text against the export size", {
+  testthat::skip_if_not_installed("dtametaTMB")
+  d <- data.frame(study = LETTERS[1:6], TP = c(35,42,28,60,45,70),
+    FN = c(15,8,22,20,15,10), TN = c(80,65,90,55,75,60), FP = c(20,35,10,45,25,40))
+  f <- fit_sroc(d, auc_boot = 0)
+  out <- tempfile(fileext = ".png")
+  on.exit(unlink(out), add = TRUE)
+  expect_s3_class(plot_sroc(f, output_file = out, width = 4, height = 4, dpi = 72), "ggplot")
+  expect_true(file.exists(out))
+  expect_error(plot_sroc(f, output_file = tempfile(fileext = ".png"), width = 3, height = 3, dpi = 72),
+    "Legend does not fit")
+})
+
 test_that("SROC x axis switches between specificity and FPR", {
   testthat::skip_if_not_installed("dtametaTMB")
   d <- data.frame(study = LETTERS[1:6], TP = c(35,42,28,60,45,70),
