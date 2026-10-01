@@ -1,10 +1,7 @@
 study,year,TP,FP,FN,TN
-Parcha 2021,2021,169,29,122,350
-Tada 2021,2021,113,5,113,173
-Forsyth 2021,2021,11,16,39,11
-Reddy 2022,2022,163,3,222,99
-Ariyaratnam 2024,2024,61,11,27,21
-Akerman 2025,2025,117,42,123,214
-Wang 2023,2023,61,2,140,116
-Nguyen 2025,2025,110,36,8,126
-Rahi 2026,2026,71,27,9,85
+Simulated study A,2019,35,20,15,80
+Simulated study B,2020,42,35,8,65
+Simulated study C,2020,28,10,22,90
+Simulated study D,2021,60,45,20,55
+Simulated study E,2022,45,25,15,75
+Simulated study F,2023,70,40,10,60
